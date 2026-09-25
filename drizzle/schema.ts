@@ -428,6 +428,34 @@ export const inventoryMovements = mysqlTable("inventory_movements", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ balanceIdx: index("idx_inventory_movements_balance_created").on(table.sellerId, table.variantId, table.locationId, table.balanceType, table.createdAt), actorIdx: index("idx_inventory_movements_actor_created").on(table.actorUserId, table.createdAt), reservationIdx: index("idx_inventory_movements_reservation").on(table.reservationId), referenceIdx: index("idx_inventory_movements_reference").on(table.referenceType, table.referenceId) }));
 
+export const commerceCarts = mysqlTable("commerce_carts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: mysqlEnum("status", ["active", "converted", "abandoned"]).default("active").notNull(),
+  currency: varchar("currency", { length: 3 }).default("KES").notNull(),
+  activeKey: varchar("activeKey", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ activeKeyUq: uniqueIndex("uq_commerce_carts_active_key").on(table.activeKey), userStatusIdx: index("idx_commerce_carts_user_status").on(table.userId, table.status) }));
+
+export const commerceCartItems = mysqlTable("commerce_cart_items", {
+  id: int("id").autoincrement().primaryKey(),
+  cartId: int("cartId").notNull().references(() => commerceCarts.id, { onDelete: "cascade" }),
+  variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "restrict" }),
+  quantity: int("quantity").notNull(),
+  addedPriceMinor: int("addedPriceMinor").notNull(),
+  addedCurrency: varchar("addedCurrency", { length: 3 }).notNull(),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ cartVariantUq: uniqueIndex("uq_commerce_cart_items_cart_variant").on(table.cartId, table.variantId), cartIdx: index("idx_commerce_cart_items_cart_updated").on(table.cartId, table.updatedAt), variantIdx: index("idx_commerce_cart_items_variant").on(table.variantId) }));
+
+export const commerceWishlistItems = mysqlTable("commerce_wishlist_items", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "restrict" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ userVariantUq: uniqueIndex("uq_commerce_wishlist_user_variant").on(table.userId, table.variantId), userIdx: index("idx_commerce_wishlist_user_created").on(table.userId, table.createdAt), variantIdx: index("idx_commerce_wishlist_variant").on(table.variantId) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -455,6 +483,9 @@ export type InventoryLocation = typeof inventoryLocations.$inferSelect;
 export type InventoryBalance = typeof inventoryBalances.$inferSelect;
 export type InventoryReservation = typeof inventoryReservations.$inferSelect;
 export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type CommerceCart = typeof commerceCarts.$inferSelect;
+export type CommerceCartItem = typeof commerceCartItems.$inferSelect;
+export type CommerceWishlistItem = typeof commerceWishlistItems.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -548,3 +579,6 @@ export const inventoryLocationsRelations = relations(inventoryLocations, ({ one,
 export const inventoryBalancesRelations = relations(inventoryBalances, ({ one }) => ({ seller: one(sellers, { fields: [inventoryBalances.sellerId], references: [sellers.id] }), variant: one(catalogProductVariants, { fields: [inventoryBalances.variantId], references: [catalogProductVariants.id] }), location: one(inventoryLocations, { fields: [inventoryBalances.locationId], references: [inventoryLocations.id] }) }));
 export const inventoryReservationsRelations = relations(inventoryReservations, ({ one, many }) => ({ seller: one(sellers, { fields: [inventoryReservations.sellerId], references: [sellers.id] }), variant: one(catalogProductVariants, { fields: [inventoryReservations.variantId], references: [catalogProductVariants.id] }), location: one(inventoryLocations, { fields: [inventoryReservations.locationId], references: [inventoryLocations.id] }), movements: many(inventoryMovements) }));
 export const inventoryMovementsRelations = relations(inventoryMovements, ({ one }) => ({ seller: one(sellers, { fields: [inventoryMovements.sellerId], references: [sellers.id] }), variant: one(catalogProductVariants, { fields: [inventoryMovements.variantId], references: [catalogProductVariants.id] }), location: one(inventoryLocations, { fields: [inventoryMovements.locationId], references: [inventoryLocations.id] }), reservation: one(inventoryReservations, { fields: [inventoryMovements.reservationId], references: [inventoryReservations.id] }), actor: one(users, { fields: [inventoryMovements.actorUserId], references: [users.id] }) }));
+export const commerceCartsRelations = relations(commerceCarts, ({ one, many }) => ({ user: one(users, { fields: [commerceCarts.userId], references: [users.id] }), items: many(commerceCartItems) }));
+export const commerceCartItemsRelations = relations(commerceCartItems, ({ one }) => ({ cart: one(commerceCarts, { fields: [commerceCartItems.cartId], references: [commerceCarts.id] }), variant: one(catalogProductVariants, { fields: [commerceCartItems.variantId], references: [catalogProductVariants.id] }) }));
+export const commerceWishlistItemsRelations = relations(commerceWishlistItems, ({ one }) => ({ user: one(users, { fields: [commerceWishlistItems.userId], references: [users.id] }), variant: one(catalogProductVariants, { fields: [commerceWishlistItems.variantId], references: [catalogProductVariants.id] }) }));

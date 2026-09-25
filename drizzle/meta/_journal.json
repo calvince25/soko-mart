@@ -50,6 +50,13 @@
       "when": 1790347304047,
       "tag": "0006_daily_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1790348603321,
+      "tag": "0007_sparkling_cassandra_nova",
+      "breakpoints": true
     }
   ]
 }
