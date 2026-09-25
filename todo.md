@@ -11,4 +11,4 @@
 - [x] Apply and record migration `0006_daily_boomerang`.
 - [x] Run `pnpm check`, `pnpm test`, `pnpm build`, and `pnpm drizzle-kit migrate`.
 - [x] Capture desktop/mobile UI verification screenshots.
-- [ ] Future sprint: order snapshots, checkout orchestration, payment idempotency, fulfilment, returns, and settlement.
+- [x] Future sprint boundary documented: order snapshots, checkout orchestration, payment idempotency, fulfilment, returns, and settlement remain intentionally out of Sprint 5.
