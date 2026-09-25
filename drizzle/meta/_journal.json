@@ -43,6 +43,13 @@
       "when": 1790346541018,
       "tag": "0005_acoustic_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1790347304047,
+      "tag": "0006_daily_boomerang",
+      "breakpoints": true
     }
   ]
 }

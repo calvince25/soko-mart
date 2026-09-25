@@ -27,3 +27,4 @@ export type { AddressInput, PhoneUpdateInput, ProfileUpdateInput } from "./accou
 export { publicStoreSlugSchema, sellerApplicationInputSchema, sellerDocumentInputSchema, sellerIdSchema, sellerProfileInputSchema, sellerReviewSchema, sellerStatusSchema } from "./sellerSchemas";
 export type { SellerProfileInput } from "./sellerSchemas";
 export * from "./catalogSchemas";
+export * from "./inventorySchemas";

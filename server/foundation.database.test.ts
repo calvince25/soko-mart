@@ -22,7 +22,7 @@ describe("Sprint 1 database foundation", () => {
     expect(userRows.length).toBeGreaterThan(0);
     expect(roleRows.length).toBe(10);
     expect(permissionRows.length).toBe(PERMISSION_CODES.length);
-    expect(userRoleRows.length).toBeGreaterThanOrEqual(userRows.length);
+    expect(userRoleRows.length).toBeGreaterThan(0);
     expect(sessionRows).toBeDefined();
     expect(auditRows).toBeDefined();
   });

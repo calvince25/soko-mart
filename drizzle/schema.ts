@@ -367,6 +367,67 @@ export const catalogProductMedia = mysqlTable("catalog_product_media", {
   id: int("id").autoincrement().primaryKey(), productId: int("productId").notNull().references(() => catalogProducts.id, { onDelete: "cascade" }), variantId: int("variantId").references(() => catalogProductVariants.id, { onDelete: "set null" }), storageKey: varchar("storageKey", { length: 1024 }).notNull(), mediaType: mysqlEnum("mediaType", ["image", "video"]).default("image").notNull(), originalFilename: varchar("originalFilename", { length: 255 }).notNull(), mimeType: varchar("mimeType", { length: 120 }).notNull(), fileSize: int("fileSize").notNull(), altText: varchar("altText", { length: 240 }), displayOrder: int("displayOrder").default(0).notNull(), isPrimary: int("isPrimary").default(0).notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ productIdx: index("idx_catalog_product_media_product_order").on(table.productId, table.displayOrder), variantIdx: index("idx_catalog_product_media_variant").on(table.variantId) }));
 
+export const inventoryLocations = mysqlTable("inventory_locations", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerId: int("sellerId").references(() => sellers.id, { onDelete: "set null" }),
+  name: varchar("name", { length: 160 }).notNull(),
+  type: mysqlEnum("type", ["seller_location", "warehouse", "fulfillment_center"]).notNull(),
+  country: varchar("country", { length: 80 }).notNull(),
+  county: varchar("county", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  address: text("address"),
+  status: mysqlEnum("status", ["active", "inactive", "archived"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ sellerIdx: index("idx_inventory_locations_seller_status").on(table.sellerId, table.status), typeIdx: index("idx_inventory_locations_type_status").on(table.type, table.status) }));
+
+export const inventoryBalances = mysqlTable("inventory_balances", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }),
+  variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "restrict" }),
+  locationId: int("locationId").notNull().references(() => inventoryLocations.id, { onDelete: "restrict" }),
+  onHand: int("onHand").default(0).notNull(),
+  reserved: int("reserved").default(0).notNull(),
+  damaged: int("damaged").default(0).notNull(),
+  status: mysqlEnum("status", ["active", "archived"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ balanceUq: uniqueIndex("uq_inventory_balance_sku_location").on(table.sellerId, table.variantId, table.locationId), sellerIdx: index("idx_inventory_balances_seller").on(table.sellerId, table.status), variantIdx: index("idx_inventory_balances_variant").on(table.variantId), locationIdx: index("idx_inventory_balances_location").on(table.locationId) }));
+
+export const inventoryReservations = mysqlTable("inventory_reservations", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }),
+  variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "restrict" }),
+  locationId: int("locationId").notNull().references(() => inventoryLocations.id, { onDelete: "restrict" }),
+  quantity: int("quantity").notNull(),
+  status: mysqlEnum("status", ["active", "released", "expired", "converted", "cancelled"]).default("active").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  referenceType: varchar("referenceType", { length: 80 }).notNull(),
+  referenceId: varchar("referenceId", { length: 160 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  releasedAt: timestamp("releasedAt"),
+  convertedAt: timestamp("convertedAt"),
+  releaseReason: text("releaseReason"),
+}, (table) => ({ sellerIdx: index("idx_inventory_reservations_seller_status").on(table.sellerId, table.status), balanceIdx: index("idx_inventory_reservations_variant_location").on(table.variantId, table.locationId), expiryIdx: index("idx_inventory_reservations_active_expiry").on(table.status, table.expiresAt), referenceIdx: index("idx_inventory_reservations_reference").on(table.referenceType, table.referenceId) }));
+
+export const inventoryMovements = mysqlTable("inventory_movements", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }),
+  variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "restrict" }),
+  locationId: int("locationId").notNull().references(() => inventoryLocations.id, { onDelete: "restrict" }),
+  reservationId: int("reservationId").references(() => inventoryReservations.id, { onDelete: "set null" }),
+  movementType: mysqlEnum("movementType", ["initial_stock", "purchase_receipt", "manual_adjustment", "transfer_out", "transfer_in", "damage", "loss", "return", "correction", "reservation", "reservation_release", "sale"]).notNull(),
+  balanceType: mysqlEnum("balanceType", ["on_hand", "reserved", "damaged"]).notNull(),
+  direction: mysqlEnum("direction", ["in", "out"]).notNull(),
+  quantity: int("quantity").notNull(),
+  referenceType: varchar("referenceType", { length: 80 }),
+  referenceId: varchar("referenceId", { length: 160 }),
+  reason: text("reason"),
+  actorUserId: int("actorUserId").references(() => users.id, { onDelete: "set null" }),
+  requestId: varchar("requestId", { length: 96 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ balanceIdx: index("idx_inventory_movements_balance_created").on(table.sellerId, table.variantId, table.locationId, table.balanceType, table.createdAt), actorIdx: index("idx_inventory_movements_actor_created").on(table.actorUserId, table.createdAt), reservationIdx: index("idx_inventory_movements_reservation").on(table.reservationId), referenceIdx: index("idx_inventory_movements_reference").on(table.referenceType, table.referenceId) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -390,6 +451,10 @@ export type CatalogAttributeValue = typeof catalogAttributeValues.$inferSelect;
 export type CatalogProduct = typeof catalogProducts.$inferSelect;
 export type CatalogProductVariant = typeof catalogProductVariants.$inferSelect;
 export type CatalogProductMedia = typeof catalogProductMedia.$inferSelect;
+export type InventoryLocation = typeof inventoryLocations.$inferSelect;
+export type InventoryBalance = typeof inventoryBalances.$inferSelect;
+export type InventoryReservation = typeof inventoryReservations.$inferSelect;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -479,3 +544,7 @@ export const catalogProductVariantsRelations = relations(catalogProductVariants,
 export const catalogVariantAttributeValuesRelations = relations(catalogVariantAttributeValues, ({ one }) => ({ variant: one(catalogProductVariants, { fields: [catalogVariantAttributeValues.variantId], references: [catalogProductVariants.id] }), attribute: one(catalogAttributes, { fields: [catalogVariantAttributeValues.attributeId], references: [catalogAttributes.id] }), attributeValue: one(catalogAttributeValues, { fields: [catalogVariantAttributeValues.attributeValueId], references: [catalogAttributeValues.id] }) }));
 export const catalogProductMediaRelations = relations(catalogProductMedia, ({ one }) => ({ product: one(catalogProducts, { fields: [catalogProductMedia.productId], references: [catalogProducts.id] }), variant: one(catalogProductVariants, { fields: [catalogProductMedia.variantId], references: [catalogProductVariants.id] }) }));
 export const catalogProductSlugHistoryRelations = relations(catalogProductSlugHistory, ({ one }) => ({ product: one(catalogProducts, { fields: [catalogProductSlugHistory.productId], references: [catalogProducts.id] }) }));
+export const inventoryLocationsRelations = relations(inventoryLocations, ({ one, many }) => ({ seller: one(sellers, { fields: [inventoryLocations.sellerId], references: [sellers.id] }), balances: many(inventoryBalances), movements: many(inventoryMovements), reservations: many(inventoryReservations) }));
+export const inventoryBalancesRelations = relations(inventoryBalances, ({ one }) => ({ seller: one(sellers, { fields: [inventoryBalances.sellerId], references: [sellers.id] }), variant: one(catalogProductVariants, { fields: [inventoryBalances.variantId], references: [catalogProductVariants.id] }), location: one(inventoryLocations, { fields: [inventoryBalances.locationId], references: [inventoryLocations.id] }) }));
+export const inventoryReservationsRelations = relations(inventoryReservations, ({ one, many }) => ({ seller: one(sellers, { fields: [inventoryReservations.sellerId], references: [sellers.id] }), variant: one(catalogProductVariants, { fields: [inventoryReservations.variantId], references: [catalogProductVariants.id] }), location: one(inventoryLocations, { fields: [inventoryReservations.locationId], references: [inventoryLocations.id] }), movements: many(inventoryMovements) }));
+export const inventoryMovementsRelations = relations(inventoryMovements, ({ one }) => ({ seller: one(sellers, { fields: [inventoryMovements.sellerId], references: [sellers.id] }), variant: one(catalogProductVariants, { fields: [inventoryMovements.variantId], references: [catalogProductVariants.id] }), location: one(inventoryLocations, { fields: [inventoryMovements.locationId], references: [inventoryLocations.id] }), reservation: one(inventoryReservations, { fields: [inventoryMovements.reservationId], references: [inventoryReservations.id] }), actor: one(users, { fields: [inventoryMovements.actorUserId], references: [users.id] }) }));
