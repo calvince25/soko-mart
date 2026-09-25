@@ -9,13 +9,19 @@ import Account from "./pages/Account";
 import SellerPortal from "./pages/SellerPortal";
 import Catalog from "./pages/Catalog";
 import Inventory from "./pages/Inventory";
+import Orders, { OrderConfirmation } from "./pages/Orders";
+import SellerOrders from "./pages/SellerOrders";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/account" component={Account} />
+      <Route path="/orders" component={Orders} />
+      <Route path="/orders/:orderId" component={OrderConfirmation} />
       <Route path="/seller" component={SellerPortal} />
+      <Route path="/seller/orders" component={SellerOrders} />
+      <Route path="/seller/orders/:sellerOrderId" component={SellerOrders} />
       <Route path="/seller/catalog" component={Catalog} />
       <Route path="/seller/inventory" component={Inventory} />
       <Route path="/404" component={NotFound} />

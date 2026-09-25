@@ -246,6 +246,18 @@ export async function validateCart(userId: number) {
   return getCart(userId);
 }
 
+export async function finalizePurchasedCartLines(tx: any, cartId: number, variantIds: number[], userId: number) {
+  if (!variantIds.length) return { removed: 0, cartConverted: false };
+  const result = await tx.delete(commerceCartItems).where(and(eq(commerceCartItems.cartId, cartId), inArray(commerceCartItems.variantId, variantIds)));
+  const removed = Number((result as any)?.[0]?.affectedRows ?? (result as any)?.affectedRows ?? 0);
+  const remaining = await tx.select({ id: commerceCartItems.id }).from(commerceCartItems).where(eq(commerceCartItems.cartId, cartId)).limit(1);
+  const cartConverted = remaining.length === 0;
+  if (cartConverted) await tx.update(commerceCarts).set({ status: "converted", activeKey: null, updatedAt: new Date() }).where(and(eq(commerceCarts.id, cartId), eq(commerceCarts.status, "active")));
+  else await tx.update(commerceCarts).set({ updatedAt: new Date() }).where(eq(commerceCarts.id, cartId));
+  await writeAuditEvent(tx, { actorUserId: userId, action: "commerce.cart.finalized_for_order", entityType: "commerce_cart", entityId: String(cartId), afterState: { purchasedVariantIds: variantIds, removed, cartConverted }, requestId: getRequestId() });
+  return { removed, cartConverted };
+}
+
 export async function findVariantForCart(userId: number, variantId: number) {
   const db = await database();
   const row = await existingVariant(db, variantId);

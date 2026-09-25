@@ -11,6 +11,7 @@ import { withTransaction } from "../../transactions/database";
 import { releasePaymentReservation, reserveForPayment } from "../inventory/service";
 import { getCheckoutSession } from "../checkout/service";
 import { mpesaProvider, type PaymentProviderCallback } from "./provider";
+import { createOrderFromSuccessfulPayment } from "../order/service";
 
 const PAYMENT_TTL_MS = 15 * 60 * 1000;
 const terminal = ["successful", "failed", "cancelled", "expired", "refunded", "partially_refunded"] as const;
@@ -136,7 +137,18 @@ async function applyResult(callback: PaymentProviderCallback, actorUserId: numbe
   return { paymentId, ...outcome };
 }
 
-export async function processMpesaCallback(payload: unknown) { return applyResult(mpesaProvider.parseCallback(payload)); }
+async function orderForSuccessfulPayment(paymentId: number | null) {
+  if (!paymentId) return null;
+  const db = await database();
+  const [payment] = await db.select({ id: paymentAttempts.id, userId: paymentAttempts.userId, status: paymentAttempts.status }).from(paymentAttempts).where(eq(paymentAttempts.id, paymentId)).limit(1);
+  if (!payment || payment.status !== "successful") return null;
+  return createOrderFromSuccessfulPayment(payment.userId, payment.id);
+}
+
+export async function processMpesaCallback(payload: unknown) {
+  const result = await applyResult(mpesaProvider.parseCallback(payload));
+  return { ...result, order: result.status === "successful" ? await orderForSuccessfulPayment(result.paymentId) : null };
+}
 
 export async function getPayment(userId: number, paymentId: number) { return paymentView(userId, paymentId); }
 
@@ -177,7 +189,8 @@ export async function reconcilePayment(userId: number, paymentId: number) {
   if (!payment.providerReference || terminal.includes(payment.status as any)) return paymentView(userId, paymentId);
   const status = await mpesaProvider.queryStatus(payment.providerReference);
   if (status === "pending" || status === "processing") return paymentView(userId, paymentId);
-  await applyResult({ eventId: `reconcile:${payment.providerReference}:${status}`, providerReference: payment.providerReference, status, raw: { source: "reconciliation" } }, userId);
+  const result = await applyResult({ eventId: `reconcile:${payment.providerReference}:${status}`, providerReference: payment.providerReference, status, raw: { source: "reconciliation" } }, userId);
+  if (result.status === "successful") await orderForSuccessfulPayment(result.paymentId);
   return paymentView(userId, paymentId);
 }
 

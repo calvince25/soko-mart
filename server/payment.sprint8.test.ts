@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import { getDb } from "./db";
-import { catalogCategories, catalogProductVariants, catalogProducts, checkoutSessions, commerceCartItems, commerceCarts, customerAddresses, customerPhones, inventoryBalances, inventoryLocations, inventoryMovements, inventoryReservations, paymentAttempts, paymentCallbackEvents, paymentReservations, sellers, users } from "../drizzle/schema";
+import { catalogCategories, catalogProductVariants, catalogProducts, checkoutSessions, commerceCartItems, commerceCarts, customerAddresses, customerPhones, inventoryBalances, inventoryLocations, inventoryMovements, inventoryReservations, orderAddressSnapshots, orderItems, orderReservationLinks, orderSellerOrders, orders, paymentAttempts, paymentCallbackEvents, paymentReservations, sellers, users } from "../drizzle/schema";
 import { expirePaymentAttempt, processMpesaCallback } from "./domains/payment/service";
 
 const integration = process.env.DATABASE_URL ? describe : describe.skip;
@@ -60,6 +60,15 @@ integration("payments Sprint 8", () => {
     if (!db) return;
     if (paymentIds.length) {
       const links = await db.select({ reservationId: paymentReservations.inventoryReservationId }).from(paymentReservations).where(inArray(paymentReservations.paymentAttemptId, paymentIds));
+      const createdOrders = await db.select({ id: orders.id }).from(orders).where(inArray(orders.paymentAttemptId, paymentIds));
+      for (const order of createdOrders) {
+        const sellerRows = await db.select({ id: orderSellerOrders.id }).from(orderSellerOrders).where(eq(orderSellerOrders.parentOrderId, order.id));
+        await db.delete(orderReservationLinks).where(eq(orderReservationLinks.orderId, order.id));
+        if (sellerRows.length) await db.delete(orderItems).where(inArray(orderItems.sellerOrderId, sellerRows.map((row) => row.id)));
+        await db.delete(orderAddressSnapshots).where(eq(orderAddressSnapshots.orderId, order.id));
+        await db.delete(orderSellerOrders).where(eq(orderSellerOrders.parentOrderId, order.id));
+        await db.delete(orders).where(eq(orders.id, order.id));
+      }
       await db.delete(paymentAttempts).where(inArray(paymentAttempts.id, paymentIds));
       if (links.length) await db.delete(inventoryReservations).where(inArray(inventoryReservations.id, links.map((row) => row.reservationId)));
       await db.delete(paymentCallbackEvents).where(inArray(paymentCallbackEvents.paymentAttemptId, paymentIds));

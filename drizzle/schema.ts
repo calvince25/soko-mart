@@ -550,6 +550,86 @@ export const paymentReservations = mysqlTable("payment_reservations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ paymentFk: foreignKey({ columns: [table.paymentAttemptId], foreignColumns: [paymentAttempts.id], name: "fk_payment_reservation_attempt" }).onDelete("cascade"), inventoryFk: foreignKey({ columns: [table.inventoryReservationId], foreignColumns: [inventoryReservations.id], name: "fk_payment_reservation_inventory" }).onDelete("restrict"), paymentIdx: index("idx_payment_reservation_payment").on(table.paymentAttemptId), inventoryUq: uniqueIndex("uq_payment_reservation_inventory").on(table.inventoryReservationId) }));
 
+export const orders = mysqlTable("orders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderNumber: varchar("orderNumber", { length: 40 }).notNull(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "restrict" }),
+  checkoutSessionId: int("checkoutSessionId").notNull().references(() => checkoutSessions.id, { onDelete: "restrict" }),
+  paymentAttemptId: int("paymentAttemptId").notNull().references(() => paymentAttempts.id, { onDelete: "restrict" }),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  subtotalMinor: int("subtotalMinor").notNull(),
+  shippingMinor: int("shippingMinor").notNull(),
+  taxMinor: int("taxMinor").notNull(),
+  feeMinor: int("feeMinor").notNull(),
+  discountMinor: int("discountMinor").default(0).notNull(),
+  totalMinor: int("totalMinor").notNull(),
+  status: mysqlEnum("status", ["pending", "confirmed", "processing", "ready_for_fulfilment", "completed", "cancelled"]).default("confirmed").notNull(),
+  paymentStatus: mysqlEnum("paymentStatus", ["paid", "refunded", "partially_refunded"]).default("paid").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ orderNumberUq: uniqueIndex("uq_orders_order_number").on(table.orderNumber), paymentUq: uniqueIndex("uq_orders_payment_attempt").on(table.paymentAttemptId), checkoutUq: uniqueIndex("uq_orders_checkout_session").on(table.checkoutSessionId), userIdx: index("idx_orders_user_created").on(table.userId, table.createdAt), statusIdx: index("idx_orders_status_created").on(table.status, table.createdAt) }));
+
+export const orderSellerOrders = mysqlTable("order_seller_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  parentOrderId: int("parentOrderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }),
+  sellerName: varchar("sellerName", { length: 160 }).notNull(),
+  sellerSlug: varchar("sellerSlug", { length: 180 }).notNull(),
+  sellerSubtotalMinor: int("sellerSubtotalMinor").notNull(),
+  shippingMinor: int("shippingMinor").notNull(),
+  taxMinor: int("taxMinor").notNull(),
+  feeMinor: int("feeMinor").notNull(),
+  totalMinor: int("totalMinor").notNull(),
+  status: mysqlEnum("status", ["pending", "confirmed", "processing", "ready_for_fulfilment", "completed", "cancelled"]).default("confirmed").notNull(),
+  fulfilmentStatus: mysqlEnum("fulfilmentStatus", ["unfulfilled", "processing", "ready", "completed"]).default("unfulfilled").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ parentSellerUq: uniqueIndex("uq_order_seller_orders_parent_seller").on(table.parentOrderId, table.sellerId), sellerIdx: index("idx_order_seller_orders_seller_created").on(table.sellerId, table.createdAt), parentIdx: index("idx_order_seller_orders_parent").on(table.parentOrderId) }));
+
+export const orderItems = mysqlTable("order_items", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerOrderId: int("sellerOrderId").notNull().references(() => orderSellerOrders.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => catalogProducts.id, { onDelete: "restrict" }),
+  variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "restrict" }),
+  sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }),
+  productName: varchar("productName", { length: 240 }).notNull(),
+  variantName: varchar("variantName", { length: 180 }).notNull(),
+  sku: varchar("sku", { length: 120 }).notNull(),
+  quantity: int("quantity").notNull(),
+  unitPriceMinor: int("unitPriceMinor").notNull(),
+  lineSubtotalMinor: int("lineSubtotalMinor").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ sellerOrderIdx: index("idx_order_items_seller_order").on(table.sellerOrderId), variantIdx: index("idx_order_items_variant").on(table.variantId), sellerIdx: index("idx_order_items_seller").on(table.sellerId) }));
+
+export const orderAddressSnapshots = mysqlTable("order_address_snapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  recipientName: varchar("recipientName", { length: 160 }).notNull(),
+  recipientPhone: varchar("recipientPhone", { length: 48 }).notNull(),
+  country: varchar("country", { length: 80 }).notNull(),
+  county: varchar("county", { length: 120 }).notNull(),
+  town: varchar("town", { length: 120 }).notNull(),
+  neighborhood: varchar("neighborhood", { length: 160 }).notNull(),
+  estateBuilding: varchar("estateBuilding", { length: 160 }),
+  apartmentHouse: varchar("apartmentHouse", { length: 160 }),
+  streetRoad: varchar("streetRoad", { length: 160 }),
+  directions: text("directions"),
+  postalCode: varchar("postalCode", { length: 32 }),
+  latitude: varchar("latitude", { length: 40 }),
+  longitude: varchar("longitude", { length: 40 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ orderUq: uniqueIndex("uq_order_address_snapshots_order").on(table.orderId) }));
+
+export const orderReservationLinks = mysqlTable("order_reservation_links", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  orderItemId: int("orderItemId").notNull(),
+  inventoryReservationId: int("inventoryReservationId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ orderFk: foreignKey({ columns: [table.orderId], foreignColumns: [orders.id], name: "fk_order_reservation_order" }).onDelete("cascade"), sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_order_reservation_seller_order" }).onDelete("cascade"), itemFk: foreignKey({ columns: [table.orderItemId], foreignColumns: [orderItems.id], name: "fk_order_reservation_item" }).onDelete("cascade"), reservationFk: foreignKey({ columns: [table.inventoryReservationId], foreignColumns: [inventoryReservations.id], name: "fk_order_reservation_inventory" }).onDelete("restrict"), reservationUq: uniqueIndex("uq_order_reservation_links_reservation").on(table.inventoryReservationId), itemIdx: index("idx_order_reservation_links_item").on(table.orderItemId), orderIdx: index("idx_order_reservation_links_order").on(table.orderId) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -586,6 +666,11 @@ export type CheckoutSessionItem = typeof checkoutSessionItems.$inferSelect;
 export type PaymentAttempt = typeof paymentAttempts.$inferSelect;
 export type PaymentCallbackEvent = typeof paymentCallbackEvents.$inferSelect;
 export type PaymentReservation = typeof paymentReservations.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+export type OrderSellerOrder = typeof orderSellerOrders.$inferSelect;
+export type OrderItem = typeof orderItems.$inferSelect;
+export type OrderAddressSnapshot = typeof orderAddressSnapshots.$inferSelect;
+export type OrderReservationLink = typeof orderReservationLinks.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),

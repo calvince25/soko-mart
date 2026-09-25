@@ -71,6 +71,13 @@
       "when": 1790359844439,
       "tag": "0009_aromatic_sunset_bain",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1790361155493,
+      "tag": "0010_huge_rocket_racer",
+      "breakpoints": true
     }
   ]
 }
