@@ -11,6 +11,7 @@ import Catalog from "./pages/Catalog";
 import Inventory from "./pages/Inventory";
 import Orders, { OrderConfirmation } from "./pages/Orders";
 import SellerOrders from "./pages/SellerOrders";
+import AdminFulfilment from "./pages/AdminFulfilment";
 
 function Router() {
   return (
@@ -22,6 +23,8 @@ function Router() {
       <Route path="/seller" component={SellerPortal} />
       <Route path="/seller/orders" component={SellerOrders} />
       <Route path="/seller/orders/:sellerOrderId" component={SellerOrders} />
+      <Route path="/admin/fulfilment" component={AdminFulfilment} />
+      <Route path="/admin/fulfilment/:sellerOrderId" component={AdminFulfilment} />
       <Route path="/seller/catalog" component={Catalog} />
       <Route path="/seller/inventory" component={Inventory} />
       <Route path="/404" component={NotFound} />

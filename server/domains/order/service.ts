@@ -16,6 +16,8 @@ import {
   paymentReservations,
   sellers,
   sellerMembers,
+  sellerOrderFulfilmentEvents,
+  sellerOrderFulfilmentNotes,
 } from "../../../drizzle/schema";
 import { conflict, forbidden, invalidState, notFound } from "../../../shared/errors/appError";
 import { recordAuditEvent, writeAuditEvent } from "../../audit/audit";
@@ -27,6 +29,7 @@ import { convertReservationForOrder } from "../inventory/service";
 import { finalizePurchasedCartLines } from "../commerce/cart/service";
 import { emitOrderCreated } from "./events";
 import type { AdminOrderSearchInput } from "../../../shared/validation/orderSchemas";
+import type { FulfilmentState } from "../../../shared/validation/orderSchemas";
 
 function insertId(result: unknown) { return Number((result as any)?.insertId ?? (result as any)?.[0]?.insertId ?? 0); }
 async function database() { const db = await getDb(); if (!db) throw invalidState("Order services are temporarily unavailable."); return db; }
@@ -92,6 +95,7 @@ export async function createOrderFromSuccessfulPayment(userId: number, paymentId
       const sellerOrderId = insertId(sellerInsert);
       if (!sellerOrderId) throw invalidState("Seller order could not be created.");
       sellerOrderIds.push(sellerOrderId);
+      await tx.insert(sellerOrderFulfilmentEvents).values({ sellerOrderId, previousState: null, newState: "pending", actorUserId: userId, reason: "Order received", note: null });
       await writeAuditEvent(tx, { actorUserId: userId, action: "seller_order.created", entityType: "seller_order", entityId: String(sellerOrderId), afterState: { parentOrderId: orderId, sellerId: group.sellerId, totalMinor: group.totalMinor }, requestId: getRequestId() });
       for (const item of items.filter((candidate: any) => candidate.sellerId === group.sellerId)) {
         const itemInsert = await tx.insert(orderItems).values({ sellerOrderId, productId: item.productId, variantId: item.variantId, sellerId: item.sellerId, productName: item.productName, variantName: item.variantName, sku: item.sku, quantity: item.quantity, unitPriceMinor: item.unitPriceMinor, lineSubtotalMinor: item.lineSubtotalMinor, currency: item.currency });
@@ -133,7 +137,7 @@ export async function getMyOrderByNumber(userId: number, orderNumberValue: strin
   return hydrateOrder(db, order);
 }
 
-async function sellerIdsForUser(userId: number, required = true) {
+export async function sellerIdsForUser(userId: number, required = true) {
   const db = await database();
   const rows = await db.select({ sellerId: sellerMembers.sellerId }).from(sellerMembers).innerJoin(sellers, eq(sellerMembers.sellerId, sellers.id)).where(and(eq(sellerMembers.userId, userId), eq(sellerMembers.status, "active"), eq(sellers.status, "approved"), eq(sellers.verificationStatus, "approved")));
   if (!rows.length && required) throw forbidden("An approved seller membership is required.");
@@ -142,8 +146,10 @@ async function sellerIdsForUser(userId: number, required = true) {
 export async function listSellerOrders(userId: number, limit = 50, offset = 0) {
   const db = await database(); const sellerIds = await sellerIdsForUser(userId, false);
   if (!sellerIds.length) return [];
-  const rows = await db.select({ sellerOrder: orderSellerOrders, orderNumber: orders.orderNumber, currency: orders.currency }).from(orderSellerOrders).innerJoin(orders, eq(orderSellerOrders.parentOrderId, orders.id)).where(inArray(orderSellerOrders.sellerId, sellerIds)).orderBy(desc(orderSellerOrders.createdAt)).limit(limit).offset(offset);
-  return rows.map((row: any) => ({ ...row.sellerOrder, orderNumber: row.orderNumber, currency: row.currency }));
+  const rows = await db.select({ sellerOrder: orderSellerOrders, orderNumber: orders.orderNumber, currency: orders.currency, customerTown: orderAddressSnapshots.town, customerCounty: orderAddressSnapshots.county }).from(orderSellerOrders).innerJoin(orders, eq(orderSellerOrders.parentOrderId, orders.id)).leftJoin(orderAddressSnapshots, eq(orderAddressSnapshots.orderId, orders.id)).where(inArray(orderSellerOrders.sellerId, sellerIds)).orderBy(desc(orderSellerOrders.createdAt)).limit(limit).offset(offset);
+  const ids = rows.map((row: any) => row.sellerOrder.id);
+  const itemRows = ids.length ? await db.select({ sellerOrderId: orderItems.sellerOrderId }).from(orderItems).where(inArray(orderItems.sellerOrderId, ids)) : [];
+  return rows.map((row: any) => ({ ...row.sellerOrder, orderNumber: row.orderNumber, currency: row.currency, customerTown: row.customerTown, customerCounty: row.customerCounty, itemCount: itemRows.filter((item: any) => item.sellerOrderId === row.sellerOrder.id).length }));
 }
 export async function getSellerOrder(userId: number, sellerOrderId: number) {
   const db = await database(); const sellerIds = await sellerIdsForUser(userId);
@@ -152,7 +158,9 @@ export async function getSellerOrder(userId: number, sellerOrderId: number) {
   const [parent] = await db.select().from(orders).where(eq(orders.id, sellerOrder.parentOrderId)).limit(1);
   const items = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, sellerOrder.id)).orderBy(orderItems.id);
   const [address] = await db.select().from(orderAddressSnapshots).where(eq(orderAddressSnapshots.orderId, sellerOrder.parentOrderId)).limit(1);
-  return { sellerOrder, parent: parent ? { id: parent.id, orderNumber: parent.orderNumber, createdAt: parent.createdAt, currency: parent.currency } : null, items, address: address ?? null };
+  const history = await db.select().from(sellerOrderFulfilmentEvents).where(eq(sellerOrderFulfilmentEvents.sellerOrderId, sellerOrder.id)).orderBy(sellerOrderFulfilmentEvents.id);
+  const notes = await db.select().from(sellerOrderFulfilmentNotes).where(eq(sellerOrderFulfilmentNotes.sellerOrderId, sellerOrder.id)).orderBy(desc(sellerOrderFulfilmentNotes.createdAt));
+  return { sellerOrder, parent: parent ? { id: parent.id, orderNumber: parent.orderNumber, createdAt: parent.createdAt, currency: parent.currency, fulfilmentStatus: parent.fulfilmentStatus } : null, items, address: address ?? null, history, notes };
 }
 
 const sellerTransitions: Record<string, string[]> = { confirmed: ["processing"], processing: ["ready_for_fulfilment"], ready_for_fulfilment: ["completed"], completed: [] };
@@ -188,5 +196,5 @@ export async function searchOrders(input: AdminOrderSearchInput) {
   return db.select().from(orders).where(filters.length ? and(...filters) : undefined).orderBy(desc(orders.createdAt)).limit(input.limit).offset(input.offset);
 }
 export async function getAdminOrder(orderId: number) { const db = await database(); const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1); if (!order) throw notFound("Order not found."); return hydrateOrder(db, order); }
-export async function getAdminSellerOrder(sellerOrderId: number) { const db = await database(); const [sellerOrder] = await db.select().from(orderSellerOrders).where(eq(orderSellerOrders.id, sellerOrderId)).limit(1); if (!sellerOrder) throw notFound("Seller order not found."); return getSellerOrderByAdmin(db, sellerOrder); }
-async function getSellerOrderByAdmin(db: any, sellerOrder: any) { const [parent] = await db.select().from(orders).where(eq(orders.id, sellerOrder.parentOrderId)).limit(1); const items = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, sellerOrder.id)); const [address] = await db.select().from(orderAddressSnapshots).where(eq(orderAddressSnapshots.orderId, sellerOrder.parentOrderId)).limit(1); return { sellerOrder, parent, items, address: address ?? null }; }
+export async function getAdminSellerOrder(sellerOrderId: number) { const db = await database(); const [sellerOrder] = await db.select().from(orderSellerOrders).where(eq(orderSellerOrders.id, sellerOrderId)).limit(1); if (!sellerOrder) throw notFound("Seller order not found."); return hydrateSellerOrderByAdmin(db, sellerOrder); }
+export async function hydrateSellerOrderByAdmin(db: any, sellerOrder: any) { const [parent] = await db.select().from(orders).where(eq(orders.id, sellerOrder.parentOrderId)).limit(1); const items = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, sellerOrder.id)); const [address] = await db.select().from(orderAddressSnapshots).where(eq(orderAddressSnapshots.orderId, sellerOrder.parentOrderId)).limit(1); const history = await db.select().from(sellerOrderFulfilmentEvents).where(eq(sellerOrderFulfilmentEvents.sellerOrderId, sellerOrder.id)).orderBy(sellerOrderFulfilmentEvents.id); const notes = await db.select().from(sellerOrderFulfilmentNotes).where(eq(sellerOrderFulfilmentNotes.sellerOrderId, sellerOrder.id)).orderBy(desc(sellerOrderFulfilmentNotes.createdAt)); return { sellerOrder, parent, items, address: address ?? null, history, notes }; }

@@ -565,6 +565,7 @@ export const orders = mysqlTable("orders", {
   totalMinor: int("totalMinor").notNull(),
   status: mysqlEnum("status", ["pending", "confirmed", "processing", "ready_for_fulfilment", "completed", "cancelled"]).default("confirmed").notNull(),
   paymentStatus: mysqlEnum("paymentStatus", ["paid", "refunded", "partially_refunded"]).default("paid").notNull(),
+  fulfilmentStatus: mysqlEnum("fulfilmentStatus", ["unfulfilled", "accepted", "processing", "packed", "ready_for_handoff", "handed_to_logistics", "partially_fulfilled", "exception"]).default("unfulfilled").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({ orderNumberUq: uniqueIndex("uq_orders_order_number").on(table.orderNumber), paymentUq: uniqueIndex("uq_orders_payment_attempt").on(table.paymentAttemptId), checkoutUq: uniqueIndex("uq_orders_checkout_session").on(table.checkoutSessionId), userIdx: index("idx_orders_user_created").on(table.userId, table.createdAt), statusIdx: index("idx_orders_status_created").on(table.status, table.createdAt) }));
@@ -582,9 +583,19 @@ export const orderSellerOrders = mysqlTable("order_seller_orders", {
   totalMinor: int("totalMinor").notNull(),
   status: mysqlEnum("status", ["pending", "confirmed", "processing", "ready_for_fulfilment", "completed", "cancelled"]).default("confirmed").notNull(),
   fulfilmentStatus: mysqlEnum("fulfilmentStatus", ["unfulfilled", "processing", "ready", "completed"]).default("unfulfilled").notNull(),
+  fulfilmentState: mysqlEnum("fulfilmentState", ["pending", "accepted", "processing", "packed", "ready_for_handoff", "handed_to_logistics", "rejected", "cancelled", "failed"]).default("pending").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  processingAt: timestamp("processingAt"),
+  packedAt: timestamp("packedAt"),
+  readyForHandoffAt: timestamp("readyForHandoffAt"),
+  handedToLogisticsAt: timestamp("handedToLogisticsAt"),
+  cancellationReason: text("cancellationReason"),
+  cancelledByUserId: int("cancelledByUserId"),
+  cancelledAt: timestamp("cancelledAt"),
+  refundRequired: int("refundRequired").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => ({ parentSellerUq: uniqueIndex("uq_order_seller_orders_parent_seller").on(table.parentOrderId, table.sellerId), sellerIdx: index("idx_order_seller_orders_seller_created").on(table.sellerId, table.createdAt), parentIdx: index("idx_order_seller_orders_parent").on(table.parentOrderId) }));
+}, (table) => ({ parentSellerUq: uniqueIndex("uq_order_seller_orders_parent_seller").on(table.parentOrderId, table.sellerId), sellerIdx: index("idx_order_seller_orders_seller_created").on(table.sellerId, table.createdAt), sellerFulfilmentIdx: index("idx_order_seller_orders_seller_fulfilment").on(table.sellerId, table.fulfilmentState, table.createdAt), parentIdx: index("idx_order_seller_orders_parent").on(table.parentOrderId), cancelledByFk: foreignKey({ columns: [table.cancelledByUserId], foreignColumns: [users.id], name: "fk_order_seller_cancelled_by" }).onDelete("set null") }));
 
 export const orderItems = mysqlTable("order_items", {
   id: int("id").autoincrement().primaryKey(),
@@ -630,6 +641,25 @@ export const orderReservationLinks = mysqlTable("order_reservation_links", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ orderFk: foreignKey({ columns: [table.orderId], foreignColumns: [orders.id], name: "fk_order_reservation_order" }).onDelete("cascade"), sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_order_reservation_seller_order" }).onDelete("cascade"), itemFk: foreignKey({ columns: [table.orderItemId], foreignColumns: [orderItems.id], name: "fk_order_reservation_item" }).onDelete("cascade"), reservationFk: foreignKey({ columns: [table.inventoryReservationId], foreignColumns: [inventoryReservations.id], name: "fk_order_reservation_inventory" }).onDelete("restrict"), reservationUq: uniqueIndex("uq_order_reservation_links_reservation").on(table.inventoryReservationId), itemIdx: index("idx_order_reservation_links_item").on(table.orderItemId), orderIdx: index("idx_order_reservation_links_order").on(table.orderId) }));
 
+export const sellerOrderFulfilmentEvents = mysqlTable("seller_order_fulfilment_events", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  previousState: mysqlEnum("previousState", ["pending", "accepted", "processing", "packed", "ready_for_handoff", "handed_to_logistics", "rejected", "cancelled", "failed"]),
+  newState: mysqlEnum("newState", ["pending", "accepted", "processing", "packed", "ready_for_handoff", "handed_to_logistics", "rejected", "cancelled", "failed"]).notNull(),
+  actorUserId: int("actorUserId"),
+  reason: text("reason"),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_fulfilment_event_seller_order" }).onDelete("cascade"), actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_fulfilment_event_actor" }).onDelete("set null"), sellerOrderIdx: index("idx_seller_order_fulfilment_events_order_created").on(table.sellerOrderId, table.createdAt), stateIdx: index("idx_seller_order_fulfilment_events_state").on(table.newState, table.createdAt) }));
+
+export const sellerOrderFulfilmentNotes = mysqlTable("seller_order_fulfilment_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  actorUserId: int("actorUserId").notNull(),
+  note: text("note").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_fulfilment_note_seller_order" }).onDelete("cascade"), actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_fulfilment_note_actor" }).onDelete("restrict"), sellerOrderIdx: index("idx_seller_order_fulfilment_notes_order_created").on(table.sellerOrderId, table.createdAt) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -671,6 +701,8 @@ export type OrderSellerOrder = typeof orderSellerOrders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type OrderAddressSnapshot = typeof orderAddressSnapshots.$inferSelect;
 export type OrderReservationLink = typeof orderReservationLinks.$inferSelect;
+export type SellerOrderFulfilmentEvent = typeof sellerOrderFulfilmentEvents.$inferSelect;
+export type SellerOrderFulfilmentNote = typeof sellerOrderFulfilmentNotes.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
