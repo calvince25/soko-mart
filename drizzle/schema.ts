@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   index,
+  foreignKey,
   int,
   json,
   mysqlEnum,
@@ -509,6 +510,46 @@ export const checkoutSessionItems = mysqlTable("checkout_session_items", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ sessionIdx: index("idx_checkout_session_items_session").on(table.sessionId), sellerIdx: index("idx_checkout_session_items_seller").on(table.sessionId, table.sellerId) }));
 
+export const paymentAttempts = mysqlTable("payment_attempts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  checkoutSessionId: int("checkoutSessionId").notNull(),
+  provider: mysqlEnum("provider", ["mpesa", "card", "other"]).notNull(),
+  providerReference: varchar("providerReference", { length: 160 }),
+  internalReference: varchar("internalReference", { length: 160 }).notNull(),
+  idempotencyKey: varchar("idempotencyKey", { length: 160 }),
+  amountMinor: int("amountMinor").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  status: mysqlEnum("status", ["created", "pending", "processing", "successful", "failed", "cancelled", "expired", "refunded", "partially_refunded"]).default("created").notNull(),
+  phone: varchar("phone", { length: 32 }),
+  failureCode: varchar("failureCode", { length: 80 }),
+  failureMessage: text("failureMessage"),
+  metadata: json("metadata"),
+  expiresAt: timestamp("expiresAt").notNull(),
+  completedAt: timestamp("completedAt"),
+  cancelledAt: timestamp("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ userFk: foreignKey({ columns: [table.userId], foreignColumns: [users.id], name: "fk_payment_attempt_user" }).onDelete("cascade"), checkoutFk: foreignKey({ columns: [table.checkoutSessionId], foreignColumns: [checkoutSessions.id], name: "fk_payment_attempt_checkout" }).onDelete("restrict"), userIdx: index("idx_payment_attempts_user_created").on(table.userId, table.createdAt), checkoutIdx: index("idx_payment_attempts_checkout_status").on(table.checkoutSessionId, table.status), providerRefUq: uniqueIndex("uq_payment_attempts_provider_reference").on(table.provider, table.providerReference), internalRefUq: uniqueIndex("uq_payment_attempts_internal_reference").on(table.internalReference), idempotencyUq: uniqueIndex("uq_payment_attempts_user_idempotency").on(table.userId, table.idempotencyKey) }));
+
+export const paymentCallbackEvents = mysqlTable("payment_callback_events", {
+  id: int("id").autoincrement().primaryKey(),
+  provider: mysqlEnum("provider", ["mpesa", "card", "other"]).notNull(),
+  providerEventId: varchar("providerEventId", { length: 200 }).notNull(),
+  paymentAttemptId: int("paymentAttemptId"),
+  payload: json("payload"),
+  status: mysqlEnum("status", ["received", "processed", "ignored", "failed"]).default("received").notNull(),
+  processedAt: timestamp("processedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ paymentFk: foreignKey({ columns: [table.paymentAttemptId], foreignColumns: [paymentAttempts.id], name: "fk_payment_callback_attempt" }).onDelete("set null"), providerEventUq: uniqueIndex("uq_payment_callback_provider_event").on(table.provider, table.providerEventId), paymentIdx: index("idx_payment_callback_payment").on(table.paymentAttemptId) }));
+
+export const paymentReservations = mysqlTable("payment_reservations", {
+  id: int("id").autoincrement().primaryKey(),
+  paymentAttemptId: int("paymentAttemptId").notNull(),
+  inventoryReservationId: int("inventoryReservationId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ paymentFk: foreignKey({ columns: [table.paymentAttemptId], foreignColumns: [paymentAttempts.id], name: "fk_payment_reservation_attempt" }).onDelete("cascade"), inventoryFk: foreignKey({ columns: [table.inventoryReservationId], foreignColumns: [inventoryReservations.id], name: "fk_payment_reservation_inventory" }).onDelete("restrict"), paymentIdx: index("idx_payment_reservation_payment").on(table.paymentAttemptId), inventoryUq: uniqueIndex("uq_payment_reservation_inventory").on(table.inventoryReservationId) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -542,6 +583,9 @@ export type CommerceWishlistItem = typeof commerceWishlistItems.$inferSelect;
 export type CheckoutSession = typeof checkoutSessions.$inferSelect;
 export type CheckoutSessionGroup = typeof checkoutSessionGroups.$inferSelect;
 export type CheckoutSessionItem = typeof checkoutSessionItems.$inferSelect;
+export type PaymentAttempt = typeof paymentAttempts.$inferSelect;
+export type PaymentCallbackEvent = typeof paymentCallbackEvents.$inferSelect;
+export type PaymentReservation = typeof paymentReservations.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -641,3 +685,6 @@ export const commerceWishlistItemsRelations = relations(commerceWishlistItems, (
 export const checkoutSessionsRelations = relations(checkoutSessions, ({ one, many }) => ({ user: one(users, { fields: [checkoutSessions.userId], references: [users.id] }), cart: one(commerceCarts, { fields: [checkoutSessions.cartId], references: [commerceCarts.id] }), address: one(customerAddresses, { fields: [checkoutSessions.addressId], references: [customerAddresses.id] }), groups: many(checkoutSessionGroups), items: many(checkoutSessionItems) }));
 export const checkoutSessionGroupsRelations = relations(checkoutSessionGroups, ({ one }) => ({ session: one(checkoutSessions, { fields: [checkoutSessionGroups.sessionId], references: [checkoutSessions.id] }), seller: one(sellers, { fields: [checkoutSessionGroups.sellerId], references: [sellers.id] }) }));
 export const checkoutSessionItemsRelations = relations(checkoutSessionItems, ({ one }) => ({ session: one(checkoutSessions, { fields: [checkoutSessionItems.sessionId], references: [checkoutSessions.id] }), seller: one(sellers, { fields: [checkoutSessionItems.sellerId], references: [sellers.id] }), product: one(catalogProducts, { fields: [checkoutSessionItems.productId], references: [catalogProducts.id] }), variant: one(catalogProductVariants, { fields: [checkoutSessionItems.variantId], references: [catalogProductVariants.id] }) }));
+export const paymentAttemptsRelations = relations(paymentAttempts, ({ one, many }) => ({ user: one(users, { fields: [paymentAttempts.userId], references: [users.id] }), checkoutSession: one(checkoutSessions, { fields: [paymentAttempts.checkoutSessionId], references: [checkoutSessions.id] }), callbacks: many(paymentCallbackEvents), reservations: many(paymentReservations) }));
+export const paymentCallbackEventsRelations = relations(paymentCallbackEvents, ({ one }) => ({ paymentAttempt: one(paymentAttempts, { fields: [paymentCallbackEvents.paymentAttemptId], references: [paymentAttempts.id] }) }));
+export const paymentReservationsRelations = relations(paymentReservations, ({ one }) => ({ paymentAttempt: one(paymentAttempts, { fields: [paymentReservations.paymentAttemptId], references: [paymentAttempts.id] }), inventoryReservation: one(inventoryReservations, { fields: [paymentReservations.inventoryReservationId], references: [inventoryReservations.id] }) }));

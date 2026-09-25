@@ -30,3 +30,19 @@
 - [x] Replace the storefront demo checkout dialog with a server-backed checkout preview using saved addresses and seller totals.
 - [x] Add Sprint 7 integration tests and documentation.
 - [x] Future sprint boundary recorded: delivery rates, fee/tax policies, inventory reservation, payment idempotency, and parent/seller order creation.
+
+# SokoMart Sprint 8 Work Tracker
+
+- [x] Add provider-agnostic payment domain and M-Pesa adapter boundary.
+- [x] Add server-controlled payment attempt lifecycle: created, pending, processing, successful, failed, cancelled, expired, refunded, and partially_refunded.
+- [x] Add payment attempt, callback event, and payment-reservation linkage tables in migration `0009_aromatic_sunset_bain`.
+- [x] Use server-authoritative checkout totals and KES currency; never accept a client amount or currency.
+- [x] Reuse customer phone normalization and require the saved customer phone for M-Pesa.
+- [x] Implement server-only STK Push configuration, deterministic non-production mock behavior, and production fail-closed configuration.
+- [x] Add rate-limited M-Pesa callback endpoint with provider reference, amount/currency checks, normalized callback storage, and replay idempotency.
+- [x] Reserve existing inventory transactionally at payment initiation, link holds to the payment attempt, and release on failure, cancellation, or expiry.
+- [x] Add authenticated payment read, initiate, cancel, and reconciliation procedures with ownership protection.
+- [x] Replace checkout demo payment UI with server-confirmed status polling, timeout, and retry behavior.
+- [x] Add Sprint 8 integration coverage for amount authority, ownership, idempotency, callback replay, invalid transitions, failed retry, and expiry release.
+- [x] Document Sprint 8 payment architecture and the future order handoff.
+- [x] Future sprint boundary recorded: parent/seller orders, reservation conversion, fulfilment, refunds, payouts, and settlement remain out of Sprint 8.

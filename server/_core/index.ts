@@ -14,6 +14,7 @@ import { configureCors, securityHeaders } from "../security/middleware";
 import { createRateLimitMiddleware } from "../rateLimit/limiter";
 import { RATE_LIMIT_POLICIES } from "../rateLimit/policies";
 import { expressErrorHandler } from "../errors/expressErrorHandler";
+import { processMpesaCallback } from "../domains/payment/service";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -47,6 +48,14 @@ async function startServer() {
   app.use("/api/oauth", createRateLimitMiddleware(RATE_LIMIT_POLICIES.oauthCallback));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.post("/api/payments/mpesa/callback", createRateLimitMiddleware(RATE_LIMIT_POLICIES.webhook), async (req, res) => {
+    try {
+      const result = await processMpesaCallback(req.body);
+      res.status(200).json({ ResultCode: 0, ResultDesc: result.ignored ? "Callback already processed" : "Callback accepted" });
+    } catch {
+      res.status(400).json({ ResultCode: 1, ResultDesc: "Callback rejected" });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",

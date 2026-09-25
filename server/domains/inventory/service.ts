@@ -200,6 +200,30 @@ export async function createReservation(actor: Actor, input: ReservationInput) {
   });
 }
 
+export async function reserveForPayment(tx: Tx, variantId: number, quantity: number, referenceId: string, expiresAt: Date) {
+  const record = await variantRecord(variantId);
+  if (!Number.isInteger(quantity) || quantity <= 0) throw validationError("Payment reservation quantity must be a positive integer.");
+  const balances = await tx.select().from(inventoryBalances).where(and(eq(inventoryBalances.sellerId, record.seller.id), eq(inventoryBalances.variantId, variantId), eq(inventoryBalances.status, "active"))).orderBy(inventoryBalances.id);
+  let remaining = quantity;
+  const reservations: number[] = [];
+  for (const balance of balances) {
+    if (remaining <= 0) break;
+    const availableUnits = Math.max(0, balance.onHand - balance.reserved);
+    const hold = Math.min(remaining, availableUnits);
+    if (!hold) continue;
+    const updated = await tx.update(inventoryBalances).set({ reserved: sql`${inventoryBalances.reserved} + ${hold}` }).where(and(eq(inventoryBalances.id, balance.id), eq(inventoryBalances.status, "active"), sql`${inventoryBalances.onHand} - ${inventoryBalances.reserved} >= ${hold}`));
+    if (affectedRows(updated) !== 1) continue;
+    const result = await tx.insert(inventoryReservations).values({ sellerId: record.seller.id, variantId, locationId: balance.locationId, quantity: hold, status: "active", expiresAt, referenceType: "payment_attempt", referenceId });
+    const reservationId = insertId(result);
+    reservations.push(reservationId);
+    await appendMovement(tx, { sellerId: record.seller.id, variantId, locationId: balance.locationId, reservationId, movementType: "reservation", balanceType: "reserved", direction: "in", quantity: hold, referenceType: "payment_attempt", referenceId, reason: "Payment inventory hold created", actorUserId: null });
+    await audit(tx, null, "inventory.reservation.created_for_payment", "inventory_reservation", reservationId, null, { quantity: hold, paymentReference: referenceId, expiresAt });
+    remaining -= hold;
+  }
+  if (remaining > 0) throw conflict("Insufficient available inventory for this payment.");
+  return reservations;
+}
+
 async function reservationRecord(id: number) { const db = await database(); const rows = await db.select().from(inventoryReservations).where(eq(inventoryReservations.id, id)).limit(1); if (!rows.length) throw notFound("Reservation not found."); return rows[0]; }
 async function assertReservationAccess(actor: Actor, reservation: any) { const record = await ownedVariant(actor, reservation.variantId); if (record.seller.id !== reservation.sellerId) throw forbidden("Reservation ownership does not match the SKU owner."); await ownedLocation(actor, reservation.locationId, reservation.sellerId); return record; }
 
@@ -220,6 +244,10 @@ async function releaseReservationInternal(actorUserId: number | null, reservatio
     await audit(tx, actorUserId, automatic ? "inventory.reservation.expired" : "inventory.reservation.released", "inventory_reservation", reservationId, { status: reservation.status, reserved: balance.reserved }, { status: targetStatus, reserved: afterRows[0].reserved }, reason);
     return { reservation: { ...reservation, status: targetStatus, releasedAt: new Date(), releaseReason: reason }, alreadyReleased: false as const };
   });
+}
+
+export function releasePaymentReservation(reservationId: number, reason: string) {
+  return releaseReservationInternal(null, reservationId, reason);
 }
 
 export async function releaseReservation(actor: Actor, input: z.infer<typeof reservationReleaseSchema>) { const reservation = await reservationRecord(input.id); await assertReservationAccess(actor, reservation); return releaseReservationInternal(actor.id, input.id, input.reason ?? null); }

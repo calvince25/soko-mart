@@ -30,3 +30,4 @@ export * from "./catalogSchemas";
 export * from "./inventorySchemas";
 export * from "./commerceSchemas";
 export * from "./checkoutSchemas";
+export * from "./paymentSchemas";

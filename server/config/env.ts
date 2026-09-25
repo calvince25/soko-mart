@@ -5,7 +5,8 @@ const positiveInteger = (value: string | undefined, fallback: number): number =>
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const appEnvironment = (process.env.APP_ENV ?? process.env.NODE_ENV ?? "development") as AppEnvironment;
+const rawAppEnvironment = (process.env.APP_ENV ?? process.env.NODE_ENV ?? "development").toLowerCase();
+const appEnvironment = (rawAppEnvironment === "prod" ? "production" : rawAppEnvironment) as AppEnvironment;
 
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
@@ -27,6 +28,15 @@ export const ENV = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   rateLimitStore: process.env.RATE_LIMIT_STORE ?? "memory",
+  mpesa: {
+    environment: (process.env.MPESA_ENVIRONMENT ?? "sandbox") as "sandbox" | "production",
+    consumerKey: process.env.MPESA_CONSUMER_KEY ?? "",
+    consumerSecret: process.env.MPESA_CONSUMER_SECRET ?? "",
+    shortcode: process.env.MPESA_SHORTCODE ?? "",
+    passkey: process.env.MPESA_PASSKEY ?? "",
+    callbackUrl: process.env.MPESA_CALLBACK_URL ?? "",
+    mock: process.env.MPESA_MOCK === "true",
+  },
 } as const;
 
 export function validateRuntimeConfig(options: { strict?: boolean } = {}): void {

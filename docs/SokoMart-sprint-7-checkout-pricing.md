@@ -68,7 +68,7 @@ The new `commerce.checkout` router exposes:
 - `setAddress({ sessionId, addressId })`
 - `cancel({ sessionId })`
 
-The storefront's existing checkout dialog now calls `create`, reuses saved addresses, displays seller groups and authoritative totals, and shows the server's validation issues. The payment action is intentionally disabled and labeled as the next sprint boundary.
+The storefront's existing checkout dialog calls `create`, reuses saved addresses, displays seller groups and authoritative totals, and shows the server's validation issues. Sprint 8 now consumes the `ready_for_payment` session through the provider-agnostic payment domain documented in `docs/SokoMart-sprint-8-payments.md`.
 
 ## Tests
 
@@ -76,4 +76,4 @@ Sprint 7 integration coverage verifies authentication, empty-cart rejection, mul
 
 ## Next boundary
 
-The next sprint can add delivery rate selection, real shipping calculation, fee/tax policies, inventory reservation, payment idempotency, and final parent/seller order creation without weakening this snapshot contract.
+Future work can add delivery rate selection, real shipping calculation, fee/tax policies, and final parent/seller order creation without weakening this snapshot contract. Payment initiation, M-Pesa callbacks, payment idempotency, and payment-time inventory holds are implemented in Sprint 8.
