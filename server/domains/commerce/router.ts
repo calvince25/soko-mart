@@ -5,6 +5,7 @@ import { addWishlistItem, clearWishlist, getWishlist, removeWishlistItem } from 
 import { checkoutRouter } from "../checkout/router";
 import { paymentRouter } from "../payment/router";
 import { orderRouter } from "../order/router";
+import { warehouseRouter } from "../warehouse/router";
 
 export const cartRouter = router({
   get: protectedProcedure.query(({ ctx }) => getCart(ctx.user.id)),
@@ -24,4 +25,4 @@ export const wishlistRouter = router({
   clear: protectedProcedure.mutation(({ ctx }) => clearWishlist(ctx.user.id)),
 });
 
-export const commerceRouter = router({ cart: cartRouter, wishlist: wishlistRouter, checkout: checkoutRouter, payment: paymentRouter, order: orderRouter });
+export const commerceRouter = router({ cart: cartRouter, wishlist: wishlistRouter, checkout: checkoutRouter, payment: paymentRouter, order: orderRouter, warehouse: warehouseRouter });

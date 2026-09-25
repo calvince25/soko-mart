@@ -660,6 +660,138 @@ export const sellerOrderFulfilmentNotes = mysqlTable("seller_order_fulfilment_no
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_fulfilment_note_seller_order" }).onDelete("cascade"), actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_fulfilment_note_actor" }).onDelete("restrict"), sellerOrderIdx: index("idx_seller_order_fulfilment_notes_order_created").on(table.sellerOrderId, table.createdAt) }));
 
+export const warehouses = mysqlTable("warehouses", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 160 }).notNull(),
+  code: varchar("code", { length: 32 }).notNull(),
+  country: varchar("country", { length: 80 }).notNull().default("Kenya"),
+  county: varchar("county", { length: 120 }).notNull(),
+  town: varchar("town", { length: 120 }).notNull(),
+  address: text("address").notNull(),
+  status: mysqlEnum("status", ["active", "inactive", "maintenance"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ codeUq: uniqueIndex("uq_warehouses_code").on(table.code), statusIdx: index("idx_warehouses_status").on(table.status) }));
+
+export const warehouseUserAssignments = mysqlTable("warehouse_user_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  warehouseId: int("warehouseId").notNull(),
+  userId: int("userId").notNull(),
+  status: mysqlEnum("status", ["active", "inactive"]).default("active").notNull(),
+  assignedByUserId: int("assignedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ warehouseUserUq: uniqueIndex("uq_warehouse_user_assignment").on(table.warehouseId, table.userId), warehouseIdx: index("idx_warehouse_assignments_warehouse_status").on(table.warehouseId, table.status), userIdx: index("idx_warehouse_assignments_user_status").on(table.userId, table.status), warehouseFk: foreignKey({ columns: [table.warehouseId], foreignColumns: [warehouses.id], name: "fk_wh_assignment_warehouse" }).onDelete("cascade"), userFk: foreignKey({ columns: [table.userId], foreignColumns: [users.id], name: "fk_wh_assignment_user" }).onDelete("cascade"), assignedByFk: foreignKey({ columns: [table.assignedByUserId], foreignColumns: [users.id], name: "fk_wh_assignment_actor" }).onDelete("restrict") }));
+
+export const warehouseIntakes = mysqlTable("warehouse_intakes", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  parentOrderId: int("parentOrderId").notNull(),
+  sellerId: int("sellerId").notNull(),
+  warehouseId: int("warehouseId").notNull(),
+  receivedByUserId: int("receivedByUserId"),
+  status: mysqlEnum("status", ["awaiting_intake", "received", "verification_required", "verified", "discrepancy", "rejected"]).default("awaiting_intake").notNull(),
+  expectedItemCount: int("expectedItemCount").notNull(),
+  receivedItemCount: int("receivedItemCount").default(0).notNull(),
+  packageCount: int("packageCount").default(0).notNull(),
+  discrepancySummary: text("discrepancySummary"),
+  notes: text("notes"),
+  receivedAt: timestamp("receivedAt"),
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ sellerOrderUq: uniqueIndex("uq_warehouse_intakes_seller_order").on(table.sellerOrderId), warehouseStatusIdx: index("idx_warehouse_intakes_warehouse_status").on(table.warehouseId, table.status, table.createdAt), sellerIdx: index("idx_warehouse_intakes_seller").on(table.sellerId), sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_wh_intake_seller_order" }).onDelete("restrict"), parentFk: foreignKey({ columns: [table.parentOrderId], foreignColumns: [orders.id], name: "fk_wh_intake_parent" }).onDelete("restrict"), sellerFk: foreignKey({ columns: [table.sellerId], foreignColumns: [sellers.id], name: "fk_wh_intake_seller" }).onDelete("restrict"), warehouseFk: foreignKey({ columns: [table.warehouseId], foreignColumns: [warehouses.id], name: "fk_wh_intake_warehouse" }).onDelete("restrict"), receivedByFk: foreignKey({ columns: [table.receivedByUserId], foreignColumns: [users.id], name: "fk_wh_intake_receiver" }).onDelete("set null") }));
+
+export const warehousePackages = mysqlTable("warehouse_packages", {
+  id: int("id").autoincrement().primaryKey(),
+  packageReference: varchar("packageReference", { length: 32 }).notNull(),
+  intakeId: int("intakeId").notNull(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  parentOrderId: int("parentOrderId").notNull(),
+  sellerId: int("sellerId").notNull(),
+  warehouseId: int("warehouseId").notNull(),
+  status: mysqlEnum("status", ["received", "verification_required", "verified", "discrepancy", "rejected", "sorted", "dispatch_ready"]).default("received").notNull(),
+  destinationCountry: varchar("destinationCountry", { length: 80 }).notNull(),
+  destinationCounty: varchar("destinationCounty", { length: 120 }).notNull(),
+  destinationTown: varchar("destinationTown", { length: 120 }).notNull(),
+  destinationZone: varchar("destinationZone", { length: 120 }),
+  deliveryMethod: varchar("deliveryMethod", { length: 80 }),
+  pickup: int("pickup").default(0).notNull(),
+  weightGrams: int("weightGrams"),
+  lengthMm: int("lengthMm"),
+  widthMm: int("widthMm"),
+  heightMm: int("heightMm"),
+  receivedAt: timestamp("receivedAt"),
+  verifiedAt: timestamp("verifiedAt"),
+  sortedAt: timestamp("sortedAt"),
+  dispatchReadyAt: timestamp("dispatchReadyAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ referenceUq: uniqueIndex("uq_warehouse_packages_reference").on(table.packageReference), intakeIdx: index("idx_warehouse_packages_intake").on(table.intakeId), warehouseStatusIdx: index("idx_warehouse_packages_warehouse_status").on(table.warehouseId, table.status, table.createdAt), sellerOrderIdx: index("idx_warehouse_packages_seller_order").on(table.sellerOrderId), intakeFk: foreignKey({ columns: [table.intakeId], foreignColumns: [warehouseIntakes.id], name: "fk_wh_package_intake" }).onDelete("cascade"), sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_wh_package_seller_order" }).onDelete("restrict"), parentFk: foreignKey({ columns: [table.parentOrderId], foreignColumns: [orders.id], name: "fk_wh_package_parent" }).onDelete("restrict"), sellerFk: foreignKey({ columns: [table.sellerId], foreignColumns: [sellers.id], name: "fk_wh_package_seller" }).onDelete("restrict"), warehouseFk: foreignKey({ columns: [table.warehouseId], foreignColumns: [warehouses.id], name: "fk_wh_package_warehouse" }).onDelete("restrict") }));
+
+export const warehousePackageItems = mysqlTable("warehouse_package_items", {
+  id: int("id").autoincrement().primaryKey(),
+  packageId: int("packageId").notNull(),
+  orderItemId: int("orderItemId").notNull(),
+  quantity: int("quantity").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ packageItemUq: uniqueIndex("uq_warehouse_package_item").on(table.packageId, table.orderItemId), itemIdx: index("idx_warehouse_package_items_order_item").on(table.orderItemId), packageFk: foreignKey({ columns: [table.packageId], foreignColumns: [warehousePackages.id], name: "fk_wh_package_item_package" }).onDelete("cascade"), orderItemFk: foreignKey({ columns: [table.orderItemId], foreignColumns: [orderItems.id], name: "fk_wh_package_item_order" }).onDelete("restrict") }));
+
+export const warehouseDiscrepancies = mysqlTable("warehouse_discrepancies", {
+  id: int("id").autoincrement().primaryKey(),
+  intakeId: int("intakeId").notNull(),
+  packageId: int("packageId"),
+  orderItemId: int("orderItemId"),
+  type: mysqlEnum("type", ["missing_item", "excess_item", "damaged_package", "wrong_item", "incomplete_shipment", "packaging_problem"]).notNull(),
+  description: text("description").notNull(),
+  quantity: int("quantity").default(1).notNull(),
+  reportedByUserId: int("reportedByUserId").notNull(),
+  resolutionStatus: mysqlEnum("resolutionStatus", ["open", "in_review", "resolved", "rejected"]).default("open").notNull(),
+  resolutionNote: text("resolutionNote"),
+  resolvedByUserId: int("resolvedByUserId"),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ intakeIdx: index("idx_warehouse_discrepancies_intake").on(table.intakeId, table.resolutionStatus), packageIdx: index("idx_warehouse_discrepancies_package").on(table.packageId), statusIdx: index("idx_warehouse_discrepancies_status").on(table.resolutionStatus, table.createdAt), intakeFk: foreignKey({ columns: [table.intakeId], foreignColumns: [warehouseIntakes.id], name: "fk_wh_discrepancy_intake" }).onDelete("cascade"), packageFk: foreignKey({ columns: [table.packageId], foreignColumns: [warehousePackages.id], name: "fk_wh_discrepancy_package" }).onDelete("set null"), orderItemFk: foreignKey({ columns: [table.orderItemId], foreignColumns: [orderItems.id], name: "fk_wh_discrepancy_item" }).onDelete("set null"), reportedByFk: foreignKey({ columns: [table.reportedByUserId], foreignColumns: [users.id], name: "fk_wh_discrepancy_reporter" }).onDelete("restrict"), resolvedByFk: foreignKey({ columns: [table.resolvedByUserId], foreignColumns: [users.id], name: "fk_wh_discrepancy_resolver" }).onDelete("set null") }));
+
+export const warehouseSortingBatches = mysqlTable("warehouse_sorting_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  batchReference: varchar("batchReference", { length: 32 }).notNull(),
+  warehouseId: int("warehouseId").notNull(),
+  destinationCountry: varchar("destinationCountry", { length: 80 }).notNull(),
+  destinationCounty: varchar("destinationCounty", { length: 120 }).notNull(),
+  destinationTown: varchar("destinationTown", { length: 120 }).notNull(),
+  destinationZone: varchar("destinationZone", { length: 120 }),
+  deliveryMethod: varchar("deliveryMethod", { length: 80 }),
+  status: mysqlEnum("status", ["open", "sorting", "sorted", "dispatch_ready", "closed"]).default("open").notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  readyAt: timestamp("readyAt"),
+  closedAt: timestamp("closedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ referenceUq: uniqueIndex("uq_warehouse_sorting_batches_reference").on(table.batchReference), warehouseStatusIdx: index("idx_warehouse_sorting_batches_warehouse_status").on(table.warehouseId, table.status, table.createdAt), warehouseFk: foreignKey({ columns: [table.warehouseId], foreignColumns: [warehouses.id], name: "fk_wh_batch_warehouse" }).onDelete("restrict"), createdByFk: foreignKey({ columns: [table.createdByUserId], foreignColumns: [users.id], name: "fk_wh_batch_creator" }).onDelete("restrict") }));
+
+export const warehouseSortingBatchPackages = mysqlTable("warehouse_sorting_batch_packages", {
+  id: int("id").autoincrement().primaryKey(),
+  batchId: int("batchId").notNull(),
+  packageId: int("packageId").notNull(),
+  addedByUserId: int("addedByUserId").notNull(),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+}, (table) => ({ batchPackageUq: uniqueIndex("uq_warehouse_batch_package").on(table.batchId, table.packageId), packageUq: uniqueIndex("uq_warehouse_package_batch").on(table.packageId), batchIdx: index("idx_warehouse_batch_packages_batch").on(table.batchId), batchFk: foreignKey({ columns: [table.batchId], foreignColumns: [warehouseSortingBatches.id], name: "fk_wh_batch_package_batch" }).onDelete("cascade"), packageFk: foreignKey({ columns: [table.packageId], foreignColumns: [warehousePackages.id], name: "fk_wh_batch_package_package" }).onDelete("restrict"), addedByFk: foreignKey({ columns: [table.addedByUserId], foreignColumns: [users.id], name: "fk_wh_batch_package_actor" }).onDelete("restrict") }));
+
+export const warehouseEvents = mysqlTable("warehouse_events", {
+  id: int("id").autoincrement().primaryKey(),
+  warehouseId: int("warehouseId").notNull(),
+  entityType: mysqlEnum("entityType", ["intake", "package", "batch"]).notNull(),
+  entityId: int("entityId").notNull(),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  previousState: varchar("previousState", { length: 64 }),
+  newState: varchar("newState", { length: 64 }),
+  actorUserId: int("actorUserId").notNull(),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ entityIdx: index("idx_warehouse_events_entity_created").on(table.entityType, table.entityId, table.createdAt), warehouseIdx: index("idx_warehouse_events_warehouse_created").on(table.warehouseId, table.createdAt), warehouseFk: foreignKey({ columns: [table.warehouseId], foreignColumns: [warehouses.id], name: "fk_wh_event_warehouse" }).onDelete("restrict"), actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_wh_event_actor" }).onDelete("restrict") }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;

@@ -1,4 +1,4 @@
-# SokoMart Sprint 9–10 Work Tracker
+# SokoMart Sprint 9–11 Work Tracker
 
 ## Sprint 9 — Orders
 
@@ -34,4 +34,23 @@
 - [x] Generate and apply additive migration `0011_magical_the_enforcers`; record its hash in the Drizzle ledger and verify idempotency.
 - [x] Run full regression tests, typecheck, production build, migration verification, diff checks, and responsive UI screenshots.
 - [x] Document Sprint 10 implementation and explicit operational boundaries.
-- [x] Future sprint boundary recorded: warehouse picking, sorting, barcode workflows, courier assignment, tracking, delivery proof, returns, refunds, notifications, settlement, and payouts.
+
+## Sprint 11 — Warehouse, Sorting, and Dispatch Preparation
+
+- [x] Add multiple warehouse locations, statuses, unique codes, and location-scoped staff assignments.
+- [x] Add warehouse RBAC permissions: `warehouse.view`, `warehouse.intake`, `warehouse.sort`, `warehouse.dispatch`, and `warehouse.manage`.
+- [x] Add seller handoff intake with unique seller-order ownership, expected quantities, package counts, and immutable events.
+- [x] Add package and package-item records with parent-order → seller-order → order-item traceability.
+- [x] Support split packages while preventing cumulative quantity over-allocation.
+- [x] Add package/intake verification and discrepancy recording/resolution for missing, excess, damaged, wrong, incomplete, and packaging issues.
+- [x] Add destination sorting batches, idempotent package assignment, and dispatch-ready transitions.
+- [x] Add batch closure only after packages are dispatch-ready.
+- [x] Keep warehouse operations separate from inventory deductions and reservations.
+- [x] Add row locks, unique constraints, state predicates, and safe retries for receiving, verification, sorting, and dispatch readiness.
+- [x] Add immutable warehouse events and audit records for intake, packages, discrepancies, batches, sorting, and dispatch readiness.
+- [x] Add responsive `/warehouse` operations workspace with dashboard metrics, intake, package, discrepancy, sorting, and dispatch controls.
+- [x] Add Sprint 11 integration coverage for permissions, cross-warehouse IDOR, duplicate intake, split packages, discrepancy resolution, sorting, dispatch, traceability, and inventory immutability.
+- [x] Generate/apply additive warehouse migrations `0012_blue_unus` and `0013_watery_barracuda`; verify MySQL-safe constraints and ledger consistency.
+- [x] Run focused warehouse tests, full regression, typecheck, production build, migration verification, diff checks, health checks, and responsive UI verification.
+- [x] Document Sprint 11 architecture, operations, security, tests, and Sprint 12 handoff contract.
+- [x] Future sprint boundary recorded: courier accounts, assignment, routes, GPS, tracking, OTP, delivery proof, returns, refunds, settlement, payouts, and full notifications.
