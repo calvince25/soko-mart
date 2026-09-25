@@ -29,3 +29,4 @@ export type { SellerProfileInput } from "./sellerSchemas";
 export * from "./catalogSchemas";
 export * from "./inventorySchemas";
 export * from "./commerceSchemas";
+export * from "./checkoutSchemas";

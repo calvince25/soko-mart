@@ -2,6 +2,7 @@ import { protectedProcedure, router } from "../../_core/trpc";
 import { addCartItemSchema, cartItemIdSchema, cartValidationSchema, setCartItemQuantitySchema, variantIdInputSchema } from "../../../shared/validation/commerceSchemas";
 import { addItem, clearCart, decreaseItem, getCart, increaseItem, removeItem, setItemQuantity, validateCart } from "./cart/service";
 import { addWishlistItem, clearWishlist, getWishlist, removeWishlistItem } from "./wishlist/service";
+import { checkoutRouter } from "../checkout/router";
 
 export const cartRouter = router({
   get: protectedProcedure.query(({ ctx }) => getCart(ctx.user.id)),
@@ -21,4 +22,4 @@ export const wishlistRouter = router({
   clear: protectedProcedure.mutation(({ ctx }) => clearWishlist(ctx.user.id)),
 });
 
-export const commerceRouter = router({ cart: cartRouter, wishlist: wishlistRouter });
+export const commerceRouter = router({ cart: cartRouter, wishlist: wishlistRouter, checkout: checkoutRouter });

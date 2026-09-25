@@ -456,6 +456,59 @@ export const commerceWishlistItems = mysqlTable("commerce_wishlist_items", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ userVariantUq: uniqueIndex("uq_commerce_wishlist_user_variant").on(table.userId, table.variantId), userIdx: index("idx_commerce_wishlist_user_created").on(table.userId, table.createdAt), variantIdx: index("idx_commerce_wishlist_variant").on(table.variantId) }));
 
+export const checkoutSessions = mysqlTable("checkout_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  cartId: int("cartId").notNull().references(() => commerceCarts.id, { onDelete: "restrict" }),
+  status: mysqlEnum("status", ["active", "validated", "ready_for_payment", "expired", "cancelled", "completed"]).default("active").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  shippingMethod: varchar("shippingMethod", { length: 48 }).notNull(),
+  addressId: int("addressId").references(() => customerAddresses.id, { onDelete: "set null" }),
+  addressSnapshot: json("addressSnapshot"),
+  subtotalMinor: int("subtotalMinor").notNull(),
+  shippingMinor: int("shippingMinor").notNull(),
+  feeMinor: int("feeMinor").notNull(),
+  taxMinor: int("taxMinor").notNull(),
+  totalMinor: int("totalMinor").notNull(),
+  issues: json("issues"),
+  idempotencyKey: varchar("idempotencyKey", { length: 160 }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  validatedAt: timestamp("validatedAt"),
+  cancelledAt: timestamp("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ userStatusIdx: index("idx_checkout_sessions_user_status").on(table.userId, table.status), expiryIdx: index("idx_checkout_sessions_status_expiry").on(table.status, table.expiresAt), idempotencyUq: uniqueIndex("uq_checkout_sessions_user_idempotency").on(table.userId, table.idempotencyKey) }));
+
+export const checkoutSessionGroups = mysqlTable("checkout_session_groups", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull().references(() => checkoutSessions.id, { onDelete: "cascade" }),
+  sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }),
+  sellerName: varchar("sellerName", { length: 160 }).notNull(),
+  subtotalMinor: int("subtotalMinor").notNull(),
+  shippingMinor: int("shippingMinor").notNull(),
+  feeMinor: int("feeMinor").notNull(),
+  taxMinor: int("taxMinor").notNull(),
+  totalMinor: int("totalMinor").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ sessionSellerUq: uniqueIndex("uq_checkout_session_group_seller").on(table.sessionId, table.sellerId), sessionIdx: index("idx_checkout_session_groups_session").on(table.sessionId) }));
+
+export const checkoutSessionItems = mysqlTable("checkout_session_items", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull().references(() => checkoutSessions.id, { onDelete: "cascade" }),
+  sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }),
+  productId: int("productId").notNull().references(() => catalogProducts.id, { onDelete: "restrict" }),
+  variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "restrict" }),
+  productName: varchar("productName", { length: 240 }).notNull(),
+  variantName: varchar("variantName", { length: 180 }).notNull(),
+  sku: varchar("sku", { length: 120 }).notNull(),
+  sellerName: varchar("sellerName", { length: 160 }).notNull(),
+  quantity: int("quantity").notNull(),
+  unitPriceMinor: int("unitPriceMinor").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  lineSubtotalMinor: int("lineSubtotalMinor").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ sessionIdx: index("idx_checkout_session_items_session").on(table.sessionId), sellerIdx: index("idx_checkout_session_items_seller").on(table.sessionId, table.sellerId) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -486,6 +539,9 @@ export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type CommerceCart = typeof commerceCarts.$inferSelect;
 export type CommerceCartItem = typeof commerceCartItems.$inferSelect;
 export type CommerceWishlistItem = typeof commerceWishlistItems.$inferSelect;
+export type CheckoutSession = typeof checkoutSessions.$inferSelect;
+export type CheckoutSessionGroup = typeof checkoutSessionGroups.$inferSelect;
+export type CheckoutSessionItem = typeof checkoutSessionItems.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -582,3 +638,6 @@ export const inventoryMovementsRelations = relations(inventoryMovements, ({ one 
 export const commerceCartsRelations = relations(commerceCarts, ({ one, many }) => ({ user: one(users, { fields: [commerceCarts.userId], references: [users.id] }), items: many(commerceCartItems) }));
 export const commerceCartItemsRelations = relations(commerceCartItems, ({ one }) => ({ cart: one(commerceCarts, { fields: [commerceCartItems.cartId], references: [commerceCarts.id] }), variant: one(catalogProductVariants, { fields: [commerceCartItems.variantId], references: [catalogProductVariants.id] }) }));
 export const commerceWishlistItemsRelations = relations(commerceWishlistItems, ({ one }) => ({ user: one(users, { fields: [commerceWishlistItems.userId], references: [users.id] }), variant: one(catalogProductVariants, { fields: [commerceWishlistItems.variantId], references: [catalogProductVariants.id] }) }));
+export const checkoutSessionsRelations = relations(checkoutSessions, ({ one, many }) => ({ user: one(users, { fields: [checkoutSessions.userId], references: [users.id] }), cart: one(commerceCarts, { fields: [checkoutSessions.cartId], references: [commerceCarts.id] }), address: one(customerAddresses, { fields: [checkoutSessions.addressId], references: [customerAddresses.id] }), groups: many(checkoutSessionGroups), items: many(checkoutSessionItems) }));
+export const checkoutSessionGroupsRelations = relations(checkoutSessionGroups, ({ one }) => ({ session: one(checkoutSessions, { fields: [checkoutSessionGroups.sessionId], references: [checkoutSessions.id] }), seller: one(sellers, { fields: [checkoutSessionGroups.sellerId], references: [sellers.id] }) }));
+export const checkoutSessionItemsRelations = relations(checkoutSessionItems, ({ one }) => ({ session: one(checkoutSessions, { fields: [checkoutSessionItems.sessionId], references: [checkoutSessions.id] }), seller: one(sellers, { fields: [checkoutSessionItems.sellerId], references: [sellers.id] }), product: one(catalogProducts, { fields: [checkoutSessionItems.productId], references: [catalogProducts.id] }), variant: one(catalogProductVariants, { fields: [checkoutSessionItems.variantId], references: [catalogProductVariants.id] }) }));
