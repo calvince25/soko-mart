@@ -24,3 +24,5 @@ export const permissionCodeSchema = z.string().trim().min(3).max(160).regex(/^[a
 
 export { addressIdSchema, addressInputSchema, addressLabelSchema, phoneUpdateSchema, profileUpdateSchema } from "./accountSchemas";
 export type { AddressInput, PhoneUpdateInput, ProfileUpdateInput } from "./accountSchemas";
+export { publicStoreSlugSchema, sellerApplicationInputSchema, sellerDocumentInputSchema, sellerIdSchema, sellerProfileInputSchema, sellerReviewSchema, sellerStatusSchema } from "./sellerSchemas";
+export type { SellerProfileInput } from "./sellerSchemas";

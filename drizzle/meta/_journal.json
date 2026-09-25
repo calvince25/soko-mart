@@ -29,6 +29,13 @@
       "when": 1790340379581,
       "tag": "0003_fancy_mad_thinker",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1790341853984,
+      "tag": "0004_thankful_talos",
+      "breakpoints": true
     }
   ]
 }

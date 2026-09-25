@@ -211,6 +211,121 @@ export const customerAddresses = mysqlTable(
   }),
 );
 
+export const sellers = mysqlTable(
+  "sellers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    legalBusinessName: varchar("legalBusinessName", { length: 200 }).notNull(),
+    storeName: varchar("storeName", { length: 160 }).notNull(),
+    storeSlug: varchar("storeSlug", { length: 180 }).notNull(),
+    businessDescription: text("businessDescription"),
+    businessType: varchar("businessType", { length: 80 }).notNull(),
+    country: varchar("country", { length: 80 }).notNull(),
+    county: varchar("county", { length: 100 }).notNull(),
+    town: varchar("town", { length: 100 }).notNull(),
+    businessAddress: text("businessAddress").notNull(),
+    businessPhone: varchar("businessPhone", { length: 32 }).notNull(),
+    businessEmail: varchar("businessEmail", { length: 320 }).notNull(),
+    logoKey: varchar("logoKey", { length: 1024 }),
+    bannerKey: varchar("bannerKey", { length: 1024 }),
+    status: mysqlEnum("status", ["draft", "pending_verification", "under_review", "approved", "rejected", "suspended", "closed"]).default("draft").notNull(),
+    verificationStatus: mysqlEnum("verificationStatus", ["not_started", "pending", "approved", "rejected"]).default("not_started").notNull(),
+    approvedAt: timestamp("approvedAt"),
+    suspendedAt: timestamp("suspendedAt"),
+    rejectionReason: text("rejectionReason"),
+    suspensionReason: text("suspensionReason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    slugUq: uniqueIndex("uq_sellers_store_slug").on(table.storeSlug),
+    statusIdx: index("idx_sellers_status_verification").on(table.status, table.verificationStatus),
+    countryIdx: index("idx_sellers_country_county_town").on(table.country, table.county, table.town),
+  }),
+);
+
+export const sellerMembers = mysqlTable(
+  "seller_members",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "cascade" }),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    memberRole: mysqlEnum("memberRole", ["owner", "manager", "catalog_staff", "fulfilment_staff", "finance_staff"]).default("owner").notNull(),
+    status: mysqlEnum("status", ["active", "invited", "removed"]).default("active").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    membershipUq: uniqueIndex("uq_seller_members_seller_user").on(table.sellerId, table.userId),
+    userIdx: index("idx_seller_members_user_status").on(table.userId, table.status),
+    sellerIdx: index("idx_seller_members_seller_role").on(table.sellerId, table.memberRole),
+  }),
+);
+
+export const sellerApplications = mysqlTable(
+  "seller_applications",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "cascade" }),
+    applicationVersion: int("applicationVersion").default(1).notNull(),
+    businessRegistrationNumber: varchar("businessRegistrationNumber", { length: 120 }),
+    taxIdentificationNumber: varchar("taxIdentificationNumber", { length: 120 }),
+    legalRepresentativeName: varchar("legalRepresentativeName", { length: 160 }).notNull(),
+    status: mysqlEnum("status", ["draft", "submitted", "under_review", "approved", "rejected", "withdrawn"]).default("draft").notNull(),
+    submittedAt: timestamp("submittedAt"),
+    reviewedAt: timestamp("reviewedAt"),
+    reviewedByUserId: int("reviewedByUserId").references(() => users.id, { onDelete: "set null" }),
+    rejectionReason: text("rejectionReason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    sellerVersionUq: uniqueIndex("uq_seller_applications_seller_version").on(table.sellerId, table.applicationVersion),
+    sellerStatusIdx: index("idx_seller_applications_seller_status").on(table.sellerId, table.status),
+    reviewIdx: index("idx_seller_applications_status_submitted").on(table.status, table.submittedAt),
+    reviewerIdx: index("idx_seller_applications_reviewer").on(table.reviewedByUserId),
+  }),
+);
+
+export const sellerVerificationDocuments = mysqlTable(
+  "seller_verification_documents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "cascade" }),
+    applicationId: int("applicationId").notNull().references(() => sellerApplications.id, { onDelete: "cascade" }),
+    documentType: varchar("documentType", { length: 80 }).notNull(),
+    storageKey: varchar("storageKey", { length: 1024 }).notNull(),
+    originalFilename: varchar("originalFilename", { length: 255 }).notNull(),
+    mimeType: varchar("mimeType", { length: 120 }).notNull(),
+    fileSize: int("fileSize").notNull(),
+    status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+    reviewedByUserId: int("reviewedByUserId").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewedAt"),
+    rejectionReason: text("rejectionReason"),
+    uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    sellerIdx: index("idx_seller_documents_seller_status").on(table.sellerId, table.status),
+    applicationIdx: index("idx_seller_documents_application").on(table.applicationId),
+    reviewerIdx: index("idx_seller_documents_reviewer").on(table.reviewedByUserId),
+  }),
+);
+
+export const sellerSlugHistory = mysqlTable(
+  "seller_slug_history",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "cascade" }),
+    slug: varchar("slug", { length: 180 }).notNull(),
+    active: int("active").default(1).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    slugUq: uniqueIndex("uq_seller_slug_history_slug").on(table.slug),
+    sellerIdx: index("idx_seller_slug_history_seller_active").on(table.sellerId, table.active),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -222,6 +337,11 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 export type CustomerProfile = typeof customerProfiles.$inferSelect;
 export type CustomerPhone = typeof customerPhones.$inferSelect;
 export type CustomerAddress = typeof customerAddresses.$inferSelect;
+export type Seller = typeof sellers.$inferSelect;
+export type SellerMember = typeof sellerMembers.$inferSelect;
+export type SellerApplication = typeof sellerApplications.$inferSelect;
+export type SellerVerificationDocument = typeof sellerVerificationDocuments.$inferSelect;
+export type SellerSlugHistory = typeof sellerSlugHistory.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -267,4 +387,32 @@ export const customerPhonesRelations = relations(customerPhones, ({ one }) => ({
 
 export const customerAddressesRelations = relations(customerAddresses, ({ one }) => ({
   user: one(users, { fields: [customerAddresses.userId], references: [users.id] }),
+}));
+
+export const sellersRelations = relations(sellers, ({ many }) => ({
+  members: many(sellerMembers),
+  applications: many(sellerApplications),
+  documents: many(sellerVerificationDocuments),
+  slugHistory: many(sellerSlugHistory),
+}));
+
+export const sellerMembersRelations = relations(sellerMembers, ({ one }) => ({
+  seller: one(sellers, { fields: [sellerMembers.sellerId], references: [sellers.id] }),
+  user: one(users, { fields: [sellerMembers.userId], references: [users.id] }),
+}));
+
+export const sellerApplicationsRelations = relations(sellerApplications, ({ one, many }) => ({
+  seller: one(sellers, { fields: [sellerApplications.sellerId], references: [sellers.id] }),
+  reviewer: one(users, { fields: [sellerApplications.reviewedByUserId], references: [users.id] }),
+  documents: many(sellerVerificationDocuments),
+}));
+
+export const sellerVerificationDocumentsRelations = relations(sellerVerificationDocuments, ({ one }) => ({
+  seller: one(sellers, { fields: [sellerVerificationDocuments.sellerId], references: [sellers.id] }),
+  application: one(sellerApplications, { fields: [sellerVerificationDocuments.applicationId], references: [sellerApplications.id] }),
+  reviewer: one(users, { fields: [sellerVerificationDocuments.reviewedByUserId], references: [users.id] }),
+}));
+
+export const sellerSlugHistoryRelations = relations(sellerSlugHistory, ({ one }) => ({
+  seller: one(sellers, { fields: [sellerSlugHistory.sellerId], references: [sellers.id] }),
 }));
