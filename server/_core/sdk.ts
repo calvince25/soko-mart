@@ -1,4 +1,4 @@
-import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS, decodeOAuthState } from "@shared/const";
+import { AXIOS_TIMEOUT_MS, COOKIE_NAME, decodeOAuthState } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
@@ -6,6 +6,7 @@ import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
+import { createSessionRecord, getSessionRecordByToken, isSessionActive } from "../auth/sessionService";
 import { ENV } from "./env";
 import type {
   ExchangeTokenRequest,
@@ -182,7 +183,7 @@ class SDKServer {
     options: { expiresInMs?: number } = {}
   ): Promise<string> {
     const issuedAt = Date.now();
-    const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
+    const expiresInMs = options.expiresInMs ?? ENV.sessionTtlMs;
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
     const secretKey = this.getSessionSecret();
 
@@ -198,7 +199,7 @@ class SDKServer {
 
   async verifySession(
     cookieValue: string | undefined | null
-  ): Promise<{ openId: string; appId: string; name: string } | null> {
+  ): Promise<{ openId: string; appId: string; name: string; expiresAt?: Date } | null> {
     if (!cookieValue) {
       console.warn("[Auth] Missing session cookie");
       return null;
@@ -224,6 +225,7 @@ class SDKServer {
         openId,
         appId,
         name,
+        expiresAt: typeof payload.exp === "number" ? new Date(payload.exp * 1000) : undefined,
       };
     } catch (error) {
       console.warn("[Auth] Session verification failed", String(error));
@@ -259,11 +261,12 @@ class SDKServer {
     // 1. Prefer the session cookie (regular OAuth login).
     const cookies = this.parseCookies(req.headers.cookie);
     let sessionToken = cookies.get(COOKIE_NAME);
+    const isCookieSession = Boolean(sessionToken);
 
     // 2. Fallback to the Authorization header (Preview auto-login via
     //    sessionStorage), used when the browser blocks iframe cookies such as
     //    Safari ITP, private browsing, or iOS/Android WebView.
-    if (!sessionToken) {
+    if (!sessionToken && ENV.allowPreviewAuthFallback) {
       const authHeader = req.headers.authorization;
       if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
         sessionToken = authHeader.slice(7);
@@ -274,6 +277,13 @@ class SDKServer {
 
     if (!session) {
       throw ForbiddenError("Invalid session cookie");
+    }
+
+    const persistedSession = isCookieSession && sessionToken
+      ? await getSessionRecordByToken(sessionToken)
+      : undefined;
+    if (persistedSession && !isSessionActive(persistedSession)) {
+      throw ForbiddenError("Session expired or revoked");
     }
 
     if (session.openId.startsWith(CRON_OPEN_ID_PREFIX)) {
@@ -309,6 +319,16 @@ class SDKServer {
 
     if (!user) {
       throw ForbiddenError("User not found");
+    }
+
+    if (isCookieSession && sessionToken && !persistedSession) {
+      await createSessionRecord({
+        userId: user.id,
+        token: sessionToken,
+        expiresAt: session.expiresAt,
+        userAgent: req.headers["user-agent"]?.toString(),
+        ipAddress: req.ip,
+      });
     }
 
     await db.upsertUser({

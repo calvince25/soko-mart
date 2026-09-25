@@ -8,6 +8,20 @@
       "when": 1790321976155,
       "tag": "0000_short_eddie_brock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1790324275473,
+      "tag": "0001_abandoned_juggernaut",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1790324311481,
+      "tag": "0002_wealthy_spectrum",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,12 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { ENV, validateRuntimeConfig } from "../config/env";
+import { requestCorrelationMiddleware } from "../logging/requestLogger";
+import { configureCors, securityHeaders } from "../security/middleware";
+import { createRateLimitMiddleware } from "../rateLimit/limiter";
+import { RATE_LIMIT_POLICIES } from "../rateLimit/policies";
+import { expressErrorHandler } from "../errors/expressErrorHandler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -29,16 +35,22 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  validateRuntimeConfig();
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.disable("x-powered-by");
+  app.use(requestCorrelationMiddleware);
+  app.use(securityHeaders());
+  configureCors(app);
+  app.use(express.json({ limit: ENV.requestBodyLimit }));
+  app.use(express.urlencoded({ limit: ENV.urlEncodedBodyLimit, extended: true }));
+  app.use("/api/oauth", createRateLimitMiddleware(RATE_LIMIT_POLICIES.oauthCallback));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
+    createRateLimitMiddleware(RATE_LIMIT_POLICIES.apiGateway),
     createExpressMiddleware({
       router: appRouter,
       createContext,
@@ -50,6 +62,8 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+
+  app.use(expressErrorHandler);
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
@@ -63,4 +77,7 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch((error) => {
+  console.error("[Server] Failed to start", error);
+  process.exitCode = 1;
+});
