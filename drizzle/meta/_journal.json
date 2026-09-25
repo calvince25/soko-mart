@@ -22,6 +22,13 @@
       "when": 1790324311481,
       "tag": "0002_wealthy_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1790340379581,
+      "tag": "0003_fancy_mad_thinker",
+      "breakpoints": true
     }
   ]
 }

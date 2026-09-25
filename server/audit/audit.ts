@@ -30,6 +30,10 @@ export async function recordAuditEvent(event: AuditEvent): Promise<void> {
     return;
   }
 
+  await writeAuditEvent(db, event);
+}
+
+export async function writeAuditEvent(db: { insert: (table: typeof auditLogs) => any }, event: AuditEvent): Promise<void> {
   await db.insert(auditLogs).values({
     actorUserId: event.actorUserId ?? null,
     action: event.action,

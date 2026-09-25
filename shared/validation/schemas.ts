@@ -21,3 +21,6 @@ export const ownerNotificationSchema = z.object({
 
 export const roleCodeSchema = z.string().trim().min(1).max(64).regex(/^[a-z][a-z0-9_]*$/);
 export const permissionCodeSchema = z.string().trim().min(3).max(160).regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
+
+export { addressIdSchema, addressInputSchema, addressLabelSchema, phoneUpdateSchema, profileUpdateSchema } from "./accountSchemas";
+export type { AddressInput, PhoneUpdateInput, ProfileUpdateInput } from "./accountSchemas";

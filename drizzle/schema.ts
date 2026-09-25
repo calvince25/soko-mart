@@ -139,6 +139,78 @@ export const auditLogs = mysqlTable(
   }),
 );
 
+export const customerProfiles = mysqlTable(
+  "customer_profiles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    firstName: varchar("firstName", { length: 80 }),
+    lastName: varchar("lastName", { length: 80 }),
+    displayName: varchar("displayName", { length: 160 }),
+    avatarUrl: varchar("avatarUrl", { length: 1024 }),
+    dateOfBirth: timestamp("dateOfBirth"),
+    preferredLanguage: varchar("preferredLanguage", { length: 16 }).default("en").notNull(),
+    preferredCurrency: varchar("preferredCurrency", { length: 3 }).default("KES").notNull(),
+    status: mysqlEnum("status", ["active", "suspended", "closed"]).default("active").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    userUq: uniqueIndex("uq_customer_profiles_user").on(table.userId),
+    statusIdx: index("idx_customer_profiles_status").on(table.status),
+  }),
+);
+
+export const customerPhones = mysqlTable(
+  "customer_phones",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    normalizedPhone: varchar("normalizedPhone", { length: 32 }).notNull(),
+    displayPhone: varchar("displayPhone", { length: 48 }).notNull(),
+    countryCode: varchar("countryCode", { length: 2 }).default("KE").notNull(),
+    verifiedAt: timestamp("verifiedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    userUq: uniqueIndex("uq_customer_phones_user").on(table.userId),
+    phoneUq: uniqueIndex("uq_customer_phones_normalized").on(table.normalizedPhone),
+    verifiedIdx: index("idx_customer_phones_verified").on(table.verifiedAt),
+  }),
+);
+
+export const customerAddresses = mysqlTable(
+  "customer_addresses",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    recipientName: varchar("recipientName", { length: 160 }).notNull(),
+    recipientPhone: varchar("recipientPhone", { length: 32 }).notNull(),
+    label: mysqlEnum("label", ["home", "work", "other"]).default("home").notNull(),
+    country: varchar("country", { length: 80 }).notNull(),
+    county: varchar("county", { length: 100 }).notNull(),
+    town: varchar("town", { length: 100 }).notNull(),
+    neighborhood: varchar("neighborhood", { length: 160 }).notNull(),
+    estateBuilding: varchar("estateBuilding", { length: 160 }),
+    apartmentHouse: varchar("apartmentHouse", { length: 120 }),
+    streetRoad: varchar("streetRoad", { length: 160 }),
+    directions: text("directions"),
+    postalCode: varchar("postalCode", { length: 24 }),
+    latitude: varchar("latitude", { length: 32 }),
+    longitude: varchar("longitude", { length: 32 }),
+    isDefault: int("isDefault").default(0).notNull(),
+    status: mysqlEnum("status", ["active", "inactive"]).default("active").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("idx_customer_addresses_user_status").on(table.userId, table.status),
+    defaultIdx: index("idx_customer_addresses_user_default").on(table.userId, table.isDefault),
+    locationIdx: index("idx_customer_addresses_country_county_town").on(table.country, table.county, table.town),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -147,6 +219,9 @@ export type UserRole = typeof userRoles.$inferSelect;
 export type RolePermission = typeof rolePermissions.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type CustomerProfile = typeof customerProfiles.$inferSelect;
+export type CustomerPhone = typeof customerPhones.$inferSelect;
+export type CustomerAddress = typeof customerAddresses.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -180,4 +255,16 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   actor: one(users, { fields: [auditLogs.actorUserId], references: [users.id] }),
+}));
+
+export const customerProfilesRelations = relations(customerProfiles, ({ one }) => ({
+  user: one(users, { fields: [customerProfiles.userId], references: [users.id] }),
+}));
+
+export const customerPhonesRelations = relations(customerPhones, ({ one }) => ({
+  user: one(users, { fields: [customerPhones.userId], references: [users.id] }),
+}));
+
+export const customerAddressesRelations = relations(customerAddresses, ({ one }) => ({
+  user: one(users, { fields: [customerAddresses.userId], references: [users.id] }),
 }));
