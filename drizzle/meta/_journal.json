@@ -36,6 +36,13 @@
       "when": 1790341853984,
       "tag": "0004_thankful_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1790346541018,
+      "tag": "0005_acoustic_the_anarchist",
+      "breakpoints": true
     }
   ]
 }

@@ -326,6 +326,47 @@ export const sellerSlugHistory = mysqlTable(
   }),
 );
 
+export const catalogCategories = mysqlTable("catalog_categories", {
+  id: int("id").autoincrement().primaryKey(),
+  parentId: int("parentId"), name: varchar("name", { length: 160 }).notNull(), slug: varchar("slug", { length: 180 }).notNull(), description: text("description"), imageKey: varchar("imageKey", { length: 1024 }), displayOrder: int("displayOrder").default(0).notNull(), status: mysqlEnum("status", ["active", "inactive", "archived"]).default("active").notNull(), seoTitle: varchar("seoTitle", { length: 180 }), seoDescription: varchar("seoDescription", { length: 320 }), createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ slugUq: uniqueIndex("uq_catalog_categories_slug").on(table.slug), parentIdx: index("idx_catalog_categories_parent_status").on(table.parentId, table.status), orderIdx: index("idx_catalog_categories_order").on(table.displayOrder) }));
+
+export const catalogBrands = mysqlTable("catalog_brands", {
+  id: int("id").autoincrement().primaryKey(), name: varchar("name", { length: 160 }).notNull(), slug: varchar("slug", { length: 180 }).notNull(), description: text("description"), logoKey: varchar("logoKey", { length: 1024 }), status: mysqlEnum("status", ["active", "inactive", "archived"]).default("active").notNull(), seoTitle: varchar("seoTitle", { length: 180 }), seoDescription: varchar("seoDescription", { length: 320 }), createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ slugUq: uniqueIndex("uq_catalog_brands_slug").on(table.slug), statusIdx: index("idx_catalog_brands_status").on(table.status) }));
+
+export const catalogAttributes = mysqlTable("catalog_attributes", {
+  id: int("id").autoincrement().primaryKey(), name: varchar("name", { length: 100 }).notNull(), code: varchar("code", { length: 100 }).notNull(), type: mysqlEnum("type", ["text", "number", "boolean", "select", "multi_select"]).notNull(), status: mysqlEnum("status", ["active", "inactive"]).default("active").notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ codeUq: uniqueIndex("uq_catalog_attributes_code").on(table.code) }));
+
+export const catalogAttributeValues = mysqlTable("catalog_attribute_values", {
+  id: int("id").autoincrement().primaryKey(), attributeId: int("attributeId").notNull().references(() => catalogAttributes.id, { onDelete: "cascade" }), value: varchar("value", { length: 160 }).notNull(), label: varchar("label", { length: 160 }).notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ valueUq: uniqueIndex("uq_catalog_attribute_value").on(table.attributeId, table.value), attributeIdx: index("idx_catalog_attribute_values_attribute").on(table.attributeId) }));
+
+export const catalogCategoryAttributes = mysqlTable("catalog_category_attributes", {
+  id: int("id").autoincrement().primaryKey(), categoryId: int("categoryId").notNull().references(() => catalogCategories.id, { onDelete: "cascade" }), attributeId: int("attributeId").notNull().references(() => catalogAttributes.id, { onDelete: "cascade" }), required: int("required").default(0).notNull(), displayOrder: int("displayOrder").default(0).notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ relationUq: uniqueIndex("uq_catalog_category_attribute").on(table.categoryId, table.attributeId) }));
+
+export const catalogProducts = mysqlTable("catalog_products", {
+  id: int("id").autoincrement().primaryKey(), sellerId: int("sellerId").notNull().references(() => sellers.id, { onDelete: "restrict" }), categoryId: int("categoryId").notNull().references(() => catalogCategories.id, { onDelete: "restrict" }), brandId: int("brandId").references(() => catalogBrands.id, { onDelete: "set null" }), name: varchar("name", { length: 240 }).notNull(), slug: varchar("slug", { length: 220 }).notNull(), shortDescription: varchar("shortDescription", { length: 500 }), fullDescription: text("fullDescription"), status: mysqlEnum("status", ["draft", "pending_review", "approved", "published", "rejected", "suspended", "archived"]).default("draft").notNull(), moderationStatus: mysqlEnum("moderationStatus", ["not_submitted", "pending", "approved", "rejected"]).default("not_submitted").notNull(), rejectionReason: text("rejectionReason"), metaTitle: varchar("metaTitle", { length: 180 }), metaDescription: varchar("metaDescription", { length: 320 }), publishedAt: timestamp("publishedAt"), archivedAt: timestamp("archivedAt"), createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ slugUq: uniqueIndex("uq_catalog_products_slug").on(table.slug), sellerIdx: index("idx_catalog_products_seller_status").on(table.sellerId, table.status), categoryIdx: index("idx_catalog_products_category_status").on(table.categoryId, table.status), brandIdx: index("idx_catalog_products_brand_status").on(table.brandId, table.status), publicIdx: index("idx_catalog_products_public").on(table.status, table.moderationStatus) }));
+
+export const catalogProductSlugHistory = mysqlTable("catalog_product_slug_history", {
+  id: int("id").autoincrement().primaryKey(), productId: int("productId").notNull().references(() => catalogProducts.id, { onDelete: "cascade" }), slug: varchar("slug", { length: 220 }).notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ slugUq: uniqueIndex("uq_catalog_product_slug_history").on(table.slug), productIdx: index("idx_catalog_product_slug_history_product").on(table.productId) }));
+
+export const catalogProductVariants = mysqlTable("catalog_product_variants", {
+  id: int("id").autoincrement().primaryKey(), productId: int("productId").notNull().references(() => catalogProducts.id, { onDelete: "cascade" }), sku: varchar("sku", { length: 120 }).notNull(), name: varchar("name", { length: 180 }).notNull(), priceMinor: int("priceMinor").notNull(), compareAtPriceMinor: int("compareAtPriceMinor"), currency: varchar("currency", { length: 3 }).default("KES").notNull(), status: mysqlEnum("status", ["active", "inactive", "archived"]).default("active").notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ skuUq: uniqueIndex("uq_catalog_variants_sku").on(table.sku), productIdx: index("idx_catalog_variants_product_status").on(table.productId, table.status) }));
+
+export const catalogVariantAttributeValues = mysqlTable("catalog_variant_attribute_values", {
+  id: int("id").autoincrement().primaryKey(), variantId: int("variantId").notNull().references(() => catalogProductVariants.id, { onDelete: "cascade" }), attributeId: int("attributeId").notNull().references(() => catalogAttributes.id, { onDelete: "restrict" }), attributeValueId: int("attributeValueId").references(() => catalogAttributeValues.id, { onDelete: "set null" }), valueText: varchar("valueText", { length: 240 }), valueNumber: varchar("valueNumber", { length: 64 }), valueBoolean: int("valueBoolean"), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ valueUq: uniqueIndex("uq_catalog_variant_attribute").on(table.variantId, table.attributeId), variantIdx: index("idx_catalog_variant_attributes_variant").on(table.variantId) }));
+
+export const catalogProductMedia = mysqlTable("catalog_product_media", {
+  id: int("id").autoincrement().primaryKey(), productId: int("productId").notNull().references(() => catalogProducts.id, { onDelete: "cascade" }), variantId: int("variantId").references(() => catalogProductVariants.id, { onDelete: "set null" }), storageKey: varchar("storageKey", { length: 1024 }).notNull(), mediaType: mysqlEnum("mediaType", ["image", "video"]).default("image").notNull(), originalFilename: varchar("originalFilename", { length: 255 }).notNull(), mimeType: varchar("mimeType", { length: 120 }).notNull(), fileSize: int("fileSize").notNull(), altText: varchar("altText", { length: 240 }), displayOrder: int("displayOrder").default(0).notNull(), isPrimary: int("isPrimary").default(0).notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ productIdx: index("idx_catalog_product_media_product_order").on(table.productId, table.displayOrder), variantIdx: index("idx_catalog_product_media_variant").on(table.variantId) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -342,6 +383,13 @@ export type SellerMember = typeof sellerMembers.$inferSelect;
 export type SellerApplication = typeof sellerApplications.$inferSelect;
 export type SellerVerificationDocument = typeof sellerVerificationDocuments.$inferSelect;
 export type SellerSlugHistory = typeof sellerSlugHistory.$inferSelect;
+export type CatalogCategory = typeof catalogCategories.$inferSelect;
+export type CatalogBrand = typeof catalogBrands.$inferSelect;
+export type CatalogAttribute = typeof catalogAttributes.$inferSelect;
+export type CatalogAttributeValue = typeof catalogAttributeValues.$inferSelect;
+export type CatalogProduct = typeof catalogProducts.$inferSelect;
+export type CatalogProductVariant = typeof catalogProductVariants.$inferSelect;
+export type CatalogProductMedia = typeof catalogProductMedia.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -416,3 +464,18 @@ export const sellerVerificationDocumentsRelations = relations(sellerVerification
 export const sellerSlugHistoryRelations = relations(sellerSlugHistory, ({ one }) => ({
   seller: one(sellers, { fields: [sellerSlugHistory.sellerId], references: [sellers.id] }),
 }));
+
+export const catalogCategoriesRelations = relations(catalogCategories, ({ one, many }) => ({
+  parent: one(catalogCategories, { fields: [catalogCategories.parentId], references: [catalogCategories.id], relationName: "category_parent" }),
+  children: many(catalogCategories, { relationName: "category_parent" }),
+  products: many(catalogProducts), attributes: many(catalogCategoryAttributes),
+}));
+export const catalogBrandsRelations = relations(catalogBrands, ({ many }) => ({ products: many(catalogProducts) }));
+export const catalogAttributesRelations = relations(catalogAttributes, ({ many }) => ({ values: many(catalogAttributeValues), categories: many(catalogCategoryAttributes), variants: many(catalogVariantAttributeValues) }));
+export const catalogAttributeValuesRelations = relations(catalogAttributeValues, ({ one }) => ({ attribute: one(catalogAttributes, { fields: [catalogAttributeValues.attributeId], references: [catalogAttributes.id] }) }));
+export const catalogCategoryAttributesRelations = relations(catalogCategoryAttributes, ({ one }) => ({ category: one(catalogCategories, { fields: [catalogCategoryAttributes.categoryId], references: [catalogCategories.id] }), attribute: one(catalogAttributes, { fields: [catalogCategoryAttributes.attributeId], references: [catalogAttributes.id] }) }));
+export const catalogProductsRelations = relations(catalogProducts, ({ one, many }) => ({ seller: one(sellers, { fields: [catalogProducts.sellerId], references: [sellers.id] }), category: one(catalogCategories, { fields: [catalogProducts.categoryId], references: [catalogCategories.id] }), brand: one(catalogBrands, { fields: [catalogProducts.brandId], references: [catalogBrands.id] }), variants: many(catalogProductVariants), media: many(catalogProductMedia), slugs: many(catalogProductSlugHistory) }));
+export const catalogProductVariantsRelations = relations(catalogProductVariants, ({ one, many }) => ({ product: one(catalogProducts, { fields: [catalogProductVariants.productId], references: [catalogProducts.id] }), attributes: many(catalogVariantAttributeValues), media: many(catalogProductMedia) }));
+export const catalogVariantAttributeValuesRelations = relations(catalogVariantAttributeValues, ({ one }) => ({ variant: one(catalogProductVariants, { fields: [catalogVariantAttributeValues.variantId], references: [catalogProductVariants.id] }), attribute: one(catalogAttributes, { fields: [catalogVariantAttributeValues.attributeId], references: [catalogAttributes.id] }), attributeValue: one(catalogAttributeValues, { fields: [catalogVariantAttributeValues.attributeValueId], references: [catalogAttributeValues.id] }) }));
+export const catalogProductMediaRelations = relations(catalogProductMedia, ({ one }) => ({ product: one(catalogProducts, { fields: [catalogProductMedia.productId], references: [catalogProducts.id] }), variant: one(catalogProductVariants, { fields: [catalogProductMedia.variantId], references: [catalogProductVariants.id] }) }));
+export const catalogProductSlugHistoryRelations = relations(catalogProductSlugHistory, ({ one }) => ({ product: one(catalogProducts, { fields: [catalogProductSlugHistory.productId], references: [catalogProducts.id] }) }));

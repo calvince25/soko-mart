@@ -3,6 +3,7 @@ import { identityRouter } from "./domains/identity/router";
 import { platformRouter } from "./domains/platform/router";
 import { accountRouter } from "./domains/account/router";
 import { sellerRouter } from "./domains/seller/router";
+import { catalogRouter } from "./domains/catalog/router";
 
 export const appRouter = router({
   identity: identityRouter,
@@ -11,6 +12,7 @@ export const appRouter = router({
   platform: platformRouter,
   account: accountRouter,
   seller: sellerRouter,
+  catalog: catalogRouter,
   // Future domains are intentionally not exposed until their procedures exist.
 });
 

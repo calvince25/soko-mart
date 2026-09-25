@@ -26,3 +26,4 @@ export { addressIdSchema, addressInputSchema, addressLabelSchema, phoneUpdateSch
 export type { AddressInput, PhoneUpdateInput, ProfileUpdateInput } from "./accountSchemas";
 export { publicStoreSlugSchema, sellerApplicationInputSchema, sellerDocumentInputSchema, sellerIdSchema, sellerProfileInputSchema, sellerReviewSchema, sellerStatusSchema } from "./sellerSchemas";
 export type { SellerProfileInput } from "./sellerSchemas";
+export * from "./catalogSchemas";
