@@ -13,6 +13,7 @@ import Orders, { OrderConfirmation } from "./pages/Orders";
 import SellerOrders from "./pages/SellerOrders";
 import AdminFulfilment from "./pages/AdminFulfilment";
 import WarehouseWorkspace from "./pages/WarehouseWorkspace";
+import DeliveryWorkspace, { Tracking } from "./pages/Delivery";
 
 function Router() {
   return (
@@ -27,6 +28,8 @@ function Router() {
       <Route path="/admin/fulfilment" component={AdminFulfilment} />
       <Route path="/admin/fulfilment/:sellerOrderId" component={AdminFulfilment} />
       <Route path="/warehouse" component={WarehouseWorkspace} />
+      <Route path="/delivery" component={DeliveryWorkspace} />
+      <Route path="/track/:shipmentId" component={Tracking} />
       <Route path="/seller/catalog" component={Catalog} />
       <Route path="/seller/inventory" component={Inventory} />
       <Route path="/404" component={NotFound} />

@@ -54,3 +54,19 @@
 - [x] Run focused warehouse tests, full regression, typecheck, production build, migration verification, diff checks, health checks, and responsive UI verification.
 - [x] Document Sprint 11 architecture, operations, security, tests, and Sprint 12 handoff contract.
 - [x] Future sprint boundary recorded: courier accounts, assignment, routes, GPS, tracking, OTP, delivery proof, returns, refunds, settlement, payouts, and full notifications.
+
+## Sprint 12 — Delivery, Courier, and Shipment Tracking
+
+- [x] Add courier identities linked one-to-one to authenticated users, with lifecycle and verification status.
+- [x] Extend RBAC with courier management, shipment assignment, and delivery-action permissions; preserve the legacy admin compatibility path.
+- [x] Add shipment records with unique tracking numbers, immutable destination snapshots, seller/order/warehouse ownership, split-package links, and lifecycle timestamps.
+- [x] Create shipments only from `dispatch_ready` warehouse packages; keep shipment creation separate from inventory deductions and reservations.
+- [x] Add immutable shipment event history with actor, courier, previous state, new state, timestamps, and operational notes.
+- [x] Add assignment controls limited to active couriers and logistics/warehouse operators; enforce courier-to-shipment ownership for courier actions.
+- [x] Implement server-authoritative pickup, in-transit, and out-for-delivery transitions with compare-and-set state predicates and duplicate-safe event history.
+- [x] Add delivery-attempt history for delivered, unavailable, incorrect address, refused, damaged, and other outcomes.
+- [x] Add customer-issued, hashed, expiring delivery OTP verification and proof-reference foundation without storing proof bytes in the database.
+- [x] Add mobile-first `/delivery` courier/logistics workspace and `/track/:shipmentId` customer tracking timeline with IDOR-safe server reads.
+- [x] Add Sprint 12 RBAC and input-boundary regression tests, schema migration `0014_dear_thaddeus_ross`, and foundation seed updates.
+- [x] Operational boundary: no GPS or invented coordinates; no route optimization, notification delivery, returns/refunds, courier payouts, or settlement in this sprint.
+- [ ] Sprint 13 handoff: notification consumers for shipment events, customer/seller tracking embedding in order detail, proof-of-delivery upload to object storage, returns/failed-delivery policy, and courier earnings/settlement.

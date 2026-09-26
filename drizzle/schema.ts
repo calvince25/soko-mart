@@ -792,6 +792,75 @@ export const warehouseEvents = mysqlTable("warehouse_events", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ entityIdx: index("idx_warehouse_events_entity_created").on(table.entityType, table.entityId, table.createdAt), warehouseIdx: index("idx_warehouse_events_warehouse_created").on(table.warehouseId, table.createdAt), warehouseFk: foreignKey({ columns: [table.warehouseId], foreignColumns: [warehouses.id], name: "fk_wh_event_warehouse" }).onDelete("restrict"), actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_wh_event_actor" }).onDelete("restrict") }));
 
+export const couriers = mysqlTable("couriers", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  fullName: varchar("fullName", { length: 160 }).notNull(),
+  phone: varchar("phone", { length: 40 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  photoRef: varchar("photoRef", { length: 512 }),
+  status: mysqlEnum("status", ["pending", "active", "inactive", "suspended", "terminated"]).default("pending").notNull(),
+  verificationStatus: mysqlEnum("verificationStatus", ["unverified", "pending", "verified", "rejected"]).default("unverified").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ userUq: uniqueIndex("uq_couriers_user").on(table.userId), phoneIdx: index("idx_couriers_phone").on(table.phone), statusIdx: index("idx_couriers_status").on(table.status), userFk: foreignKey({ columns: [table.userId], foreignColumns: [users.id], name: "fk_courier_user" }).onDelete("restrict") }));
+
+export const shipments = mysqlTable("shipments", {
+  id: int("id").autoincrement().primaryKey(),
+  trackingNumber: varchar("trackingNumber", { length: 40 }).notNull(),
+  parentOrderId: int("parentOrderId").notNull(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  warehouseId: int("warehouseId").notNull(),
+  sortingBatchId: int("sortingBatchId"),
+  courierId: int("courierId"),
+  status: mysqlEnum("status", ["shipment_created", "awaiting_assignment", "assigned", "pickup_pending", "picked_up", "in_transit", "out_for_delivery", "delivery_attempted", "delivered", "assignment_failed", "pickup_failed", "delivery_failed", "cancelled", "returned_to_warehouse"]).default("shipment_created").notNull(),
+  deliveryMethod: varchar("deliveryMethod", { length: 80 }),
+  destinationSnapshot: json("destinationSnapshot").notNull(),
+  packageCount: int("packageCount").default(0).notNull(),
+  deliveryNotes: text("deliveryNotes"),
+  otpHash: varchar("otpHash", { length: 128 }),
+  otpExpiresAt: timestamp("otpExpiresAt"),
+  assignedAt: timestamp("assignedAt"),
+  pickedUpAt: timestamp("pickedUpAt"),
+  deliveredAt: timestamp("deliveredAt"),
+  failedAt: timestamp("failedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ trackingUq: uniqueIndex("uq_shipments_tracking").on(table.trackingNumber), sellerOrderIdx: index("idx_shipments_seller_order").on(table.sellerOrderId), parentIdx: index("idx_shipments_parent_order").on(table.parentOrderId), courierStatusIdx: index("idx_shipments_courier_status").on(table.courierId, table.status), statusIdx: index("idx_shipments_status_created").on(table.status, table.createdAt), parentFk: foreignKey({ columns: [table.parentOrderId], foreignColumns: [orders.id], name: "fk_shipment_parent" }).onDelete("restrict"), sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_shipment_seller_order" }).onDelete("restrict"), warehouseFk: foreignKey({ columns: [table.warehouseId], foreignColumns: [warehouses.id], name: "fk_shipment_warehouse" }).onDelete("restrict"), batchFk: foreignKey({ columns: [table.sortingBatchId], foreignColumns: [warehouseSortingBatches.id], name: "fk_shipment_batch" }).onDelete("set null"), courierFk: foreignKey({ columns: [table.courierId], foreignColumns: [couriers.id], name: "fk_shipment_courier" }).onDelete("set null") }));
+
+export const shipmentPackages = mysqlTable("shipment_packages", {
+  id: int("id").autoincrement().primaryKey(),
+  shipmentId: int("shipmentId").notNull(),
+  packageId: int("packageId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ shipmentPackageUq: uniqueIndex("uq_shipment_package").on(table.shipmentId, table.packageId), packageActiveUq: uniqueIndex("uq_package_active_shipment").on(table.packageId), shipmentIdx: index("idx_shipment_packages_shipment").on(table.shipmentId), shipmentFk: foreignKey({ columns: [table.shipmentId], foreignColumns: [shipments.id], name: "fk_shipment_package_shipment" }).onDelete("cascade"), packageFk: foreignKey({ columns: [table.packageId], foreignColumns: [warehousePackages.id], name: "fk_shipment_package_package" }).onDelete("restrict") }));
+
+export const shipmentEvents = mysqlTable("shipment_events", {
+  id: int("id").autoincrement().primaryKey(),
+  shipmentId: int("shipmentId").notNull(),
+  courierId: int("courierId"),
+  actorUserId: int("actorUserId").notNull(),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  previousState: varchar("previousState", { length: 64 }),
+  newState: varchar("newState", { length: 64 }),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ shipmentIdx: index("idx_shipment_events_shipment_created").on(table.shipmentId, table.createdAt), courierIdx: index("idx_shipment_events_courier_created").on(table.courierId, table.createdAt), shipmentFk: foreignKey({ columns: [table.shipmentId], foreignColumns: [shipments.id], name: "fk_shipment_event_shipment" }).onDelete("cascade"), courierFk: foreignKey({ columns: [table.courierId], foreignColumns: [couriers.id], name: "fk_shipment_event_courier" }).onDelete("set null"), actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_shipment_event_actor" }).onDelete("restrict") }));
+
+export const deliveryAttempts = mysqlTable("delivery_attempts", {
+  id: int("id").autoincrement().primaryKey(),
+  shipmentId: int("shipmentId").notNull(),
+  courierId: int("courierId").notNull(),
+  attemptNumber: int("attemptNumber").notNull(),
+  outcome: mysqlEnum("outcome", ["delivered", "customer_unavailable", "incorrect_address", "customer_refused", "damaged_package", "other"]).notNull(),
+  failureReason: text("failureReason"),
+  notes: text("notes"),
+  verificationMethod: varchar("verificationMethod", { length: 40 }),
+  proofRef: varchar("proofRef", { length: 512 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ attemptUq: uniqueIndex("uq_delivery_attempt_number").on(table.shipmentId, table.attemptNumber), shipmentIdx: index("idx_delivery_attempts_shipment_created").on(table.shipmentId, table.createdAt), shipmentFk: foreignKey({ columns: [table.shipmentId], foreignColumns: [shipments.id], name: "fk_delivery_attempt_shipment" }).onDelete("cascade"), courierFk: foreignKey({ columns: [table.courierId], foreignColumns: [couriers.id], name: "fk_delivery_attempt_courier" }).onDelete("restrict") }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;

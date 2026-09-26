@@ -6,6 +6,7 @@ import { sellerRouter } from "./domains/seller/router";
 import { catalogRouter } from "./domains/catalog/router";
 import { inventoryRouter } from "./domains/inventory/router";
 import { commerceRouter } from "./domains/commerce/router";
+import { deliveryRouter } from "./domains/delivery/router";
 
 export const appRouter = router({
   identity: identityRouter,
@@ -17,7 +18,7 @@ export const appRouter = router({
   catalog: catalogRouter,
   inventory: inventoryRouter,
   commerce: commerceRouter,
-  // Future domains are intentionally not exposed until their procedures exist.
+  delivery: deliveryRouter,
 });
 
 export type AppRouter = typeof appRouter;
