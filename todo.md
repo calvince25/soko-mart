@@ -69,4 +69,4 @@
 - [x] Add mobile-first `/delivery` courier/logistics workspace and `/track/:shipmentId` customer tracking timeline with IDOR-safe server reads.
 - [x] Add Sprint 12 RBAC and input-boundary regression tests, schema migration `0014_dear_thaddeus_ross`, and foundation seed updates.
 - [x] Operational boundary: no GPS or invented coordinates; no route optimization, notification delivery, returns/refunds, courier payouts, or settlement in this sprint.
-- [ ] Sprint 13 handoff: notification consumers for shipment events, customer/seller tracking embedding in order detail, proof-of-delivery upload to object storage, returns/failed-delivery policy, and courier earnings/settlement.
+- [x] Sprint 13 handoff recorded: notification consumers for shipment events, customer/seller tracking embedding in order detail, proof-of-delivery upload to object storage, returns/failed-delivery policy, and courier earnings/settlement remain intentionally deferred.
