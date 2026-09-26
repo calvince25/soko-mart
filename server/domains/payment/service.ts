@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { checkoutSessions, customerPhones, inventoryReservations, paymentAttempts, paymentCallbackEvents, paymentReservations } from "../../../drizzle/schema";
 import { conflict, invalidState, notFound, validationError } from "../../../shared/errors/appError";
 import { normalizePhone } from "../../../shared/validation/phone";
+import { emitPaymentResult } from "./events";
 import type { PaymentInitiateInput } from "../../../shared/validation/paymentSchemas";
 import { recordAuditEvent, writeAuditEvent } from "../../audit/audit";
 import { getDb } from "../../db";
@@ -147,6 +148,11 @@ async function orderForSuccessfulPayment(paymentId: number | null) {
 
 export async function processMpesaCallback(payload: unknown) {
   const result = await applyResult(mpesaProvider.parseCallback(payload));
+  if (result.paymentId && !result.ignored) {
+    const database = await getDb();
+    const [payment] = database ? await database.select({ userId: paymentAttempts.userId }).from(paymentAttempts).where(eq(paymentAttempts.id, result.paymentId)).limit(1) : [];
+    if (payment) emitPaymentResult({ paymentId: result.paymentId, userId: payment.userId, status: result.status as "successful" | "failed" | "cancelled" });
+  }
   return { ...result, order: result.status === "successful" ? await orderForSuccessfulPayment(result.paymentId) : null };
 }
 

@@ -861,6 +861,86 @@ export const deliveryAttempts = mysqlTable("delivery_attempts", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ attemptUq: uniqueIndex("uq_delivery_attempt_number").on(table.shipmentId, table.attemptNumber), shipmentIdx: index("idx_delivery_attempts_shipment_created").on(table.shipmentId, table.createdAt), shipmentFk: foreignKey({ columns: [table.shipmentId], foreignColumns: [shipments.id], name: "fk_delivery_attempt_shipment" }).onDelete("cascade"), courierFk: foreignKey({ columns: [table.courierId], foreignColumns: [couriers.id], name: "fk_delivery_attempt_courier" }).onDelete("restrict") }));
 
+export const notificationTemplates = mysqlTable("notification_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 120 }).notNull(),
+  version: int("version").default(1).notNull(),
+  category: mysqlEnum("category", ["transactional", "promotional", "security", "operational"]).notNull(),
+  channel: mysqlEnum("channel", ["in_app", "email", "sms", "whatsapp"]).notNull(),
+  titleTemplate: varchar("titleTemplate", { length: 240 }).notNull(),
+  bodyTemplate: text("bodyTemplate").notNull(),
+  isActive: int("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ codeVersionUq: uniqueIndex("uq_notification_template_code_version").on(table.code, table.version), activeIdx: index("idx_notification_templates_active").on(table.code, table.isActive) }));
+
+export const notificationPreferences = mysqlTable("notification_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  channel: mysqlEnum("channel", ["email", "sms", "whatsapp"]).notNull(),
+  category: mysqlEnum("category", ["transactional", "promotional", "security", "operational"]).notNull(),
+  enabled: int("enabled").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ userChannelCategoryUq: uniqueIndex("uq_notification_preference_user_channel_category").on(table.userId, table.channel, table.category), userIdx: index("idx_notification_preferences_user").on(table.userId), userFk: foreignKey({ columns: [table.userId], foreignColumns: [users.id], name: "fk_notification_preference_user" }).onDelete("cascade") }));
+
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  recipientType: mysqlEnum("recipientType", ["customer", "seller", "courier", "staff", "admin"]).notNull(),
+  eventType: varchar("eventType", { length: 120 }).notNull(),
+  category: mysqlEnum("category", ["transactional", "promotional", "security", "operational"]).notNull(),
+  channel: mysqlEnum("channel", ["in_app", "email", "sms", "whatsapp"]).notNull(),
+  status: mysqlEnum("status", ["queued", "processing", "sent", "failed", "retrying"]).default("queued").notNull(),
+  title: varchar("title", { length: 240 }).notNull(),
+  body: text("body").notNull(),
+  templateCode: varchar("templateCode", { length: 120 }).notNull(),
+  templateVersion: int("templateVersion").default(1).notNull(),
+  relatedEntityType: varchar("relatedEntityType", { length: 80 }),
+  relatedEntityId: int("relatedEntityId"),
+  navigationPath: varchar("navigationPath", { length: 240 }),
+  idempotencyKey: varchar("idempotencyKey", { length: 240 }).notNull(),
+  retryCount: int("retryCount").default(0).notNull(),
+  maxRetries: int("maxRetries").default(3).notNull(),
+  nextAttemptAt: timestamp("nextAttemptAt"),
+  sentAt: timestamp("sentAt"),
+  readAt: timestamp("readAt"),
+  failureReason: text("failureReason"),
+  providerMessageId: varchar("providerMessageId", { length: 240 }),
+  providerStatus: varchar("providerStatus", { length: 80 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ idempotencyUq: uniqueIndex("uq_notifications_idempotency").on(table.idempotencyKey), recipientUnreadIdx: index("idx_notifications_recipient_read_created").on(table.userId, table.readAt, table.createdAt), recipientCreatedIdx: index("idx_notifications_recipient_created").on(table.userId, table.createdAt), statusRetryIdx: index("idx_notifications_status_next_attempt").on(table.status, table.nextAttemptAt), eventIdx: index("idx_notifications_event").on(table.eventType), relatedIdx: index("idx_notifications_related_entity").on(table.relatedEntityType, table.relatedEntityId), channelIdx: index("idx_notifications_channel_status").on(table.channel, table.status), userFk: foreignKey({ columns: [table.userId], foreignColumns: [users.id], name: "fk_notification_user" }).onDelete("cascade") }));
+
+export const notificationOutbox = mysqlTable("notification_outbox", {
+  id: int("id").autoincrement().primaryKey(),
+  eventKey: varchar("eventKey", { length: 240 }).notNull(),
+  eventType: varchar("eventType", { length: 120 }).notNull(),
+  entityType: varchar("entityType", { length: 80 }).notNull(),
+  entityId: int("entityId").notNull(),
+  payload: json("payload").notNull(),
+  status: mysqlEnum("status", ["queued", "processing", "processed", "failed", "retrying"]).default("queued").notNull(),
+  attempts: int("attempts").default(0).notNull(),
+  nextAttemptAt: timestamp("nextAttemptAt"),
+  lastError: text("lastError"),
+  processedAt: timestamp("processedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ eventKeyUq: uniqueIndex("uq_notification_outbox_event_key").on(table.eventKey), statusRetryIdx: index("idx_notification_outbox_status_retry").on(table.status, table.nextAttemptAt), eventTypeIdx: index("idx_notification_outbox_event_type").on(table.eventType) }));
+
+export const notificationDeliveryAttempts = mysqlTable("notification_delivery_attempts", {
+  id: int("id").autoincrement().primaryKey(),
+  notificationId: int("notificationId").notNull(),
+  channel: mysqlEnum("channel", ["in_app", "email", "sms", "whatsapp"]).notNull(),
+  provider: varchar("provider", { length: 80 }),
+  attemptNumber: int("attemptNumber").notNull(),
+  result: mysqlEnum("result", ["sent", "failed", "retryable"]).notNull(),
+  providerMessageId: varchar("providerMessageId", { length: 240 }),
+  providerStatus: varchar("providerStatus", { length: 80 }),
+  failureReason: text("failureReason"),
+  attemptedAt: timestamp("attemptedAt").defaultNow().notNull(),
+}, (table) => ({ attemptUq: uniqueIndex("uq_notification_delivery_attempt").on(table.notificationId, table.attemptNumber), notificationIdx: index("idx_notification_delivery_attempts_notification").on(table.notificationId, table.attemptedAt), notificationFk: foreignKey({ columns: [table.notificationId], foreignColumns: [notifications.id], name: "fk_notification_delivery_attempt_notification" }).onDelete("cascade") }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -904,6 +984,11 @@ export type OrderAddressSnapshot = typeof orderAddressSnapshots.$inferSelect;
 export type OrderReservationLink = typeof orderReservationLinks.$inferSelect;
 export type SellerOrderFulfilmentEvent = typeof sellerOrderFulfilmentEvents.$inferSelect;
 export type SellerOrderFulfilmentNote = typeof sellerOrderFulfilmentNotes.$inferSelect;
+export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type NotificationOutbox = typeof notificationOutbox.$inferSelect;
+export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -1006,3 +1091,6 @@ export const checkoutSessionItemsRelations = relations(checkoutSessionItems, ({ 
 export const paymentAttemptsRelations = relations(paymentAttempts, ({ one, many }) => ({ user: one(users, { fields: [paymentAttempts.userId], references: [users.id] }), checkoutSession: one(checkoutSessions, { fields: [paymentAttempts.checkoutSessionId], references: [checkoutSessions.id] }), callbacks: many(paymentCallbackEvents), reservations: many(paymentReservations) }));
 export const paymentCallbackEventsRelations = relations(paymentCallbackEvents, ({ one }) => ({ paymentAttempt: one(paymentAttempts, { fields: [paymentCallbackEvents.paymentAttemptId], references: [paymentAttempts.id] }) }));
 export const paymentReservationsRelations = relations(paymentReservations, ({ one }) => ({ paymentAttempt: one(paymentAttempts, { fields: [paymentReservations.paymentAttemptId], references: [paymentAttempts.id] }), inventoryReservation: one(inventoryReservations, { fields: [paymentReservations.inventoryReservationId], references: [inventoryReservations.id] }) }));
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({ user: one(users, { fields: [notificationPreferences.userId], references: [users.id] }) }));
+export const notificationsRelations = relations(notifications, ({ one, many }) => ({ user: one(users, { fields: [notifications.userId], references: [users.id] }), deliveryAttempts: many(notificationDeliveryAttempts) }));
+export const notificationDeliveryAttemptsRelations = relations(notificationDeliveryAttempts, ({ one }) => ({ notification: one(notifications, { fields: [notificationDeliveryAttempts.notificationId], references: [notifications.id] }) }));

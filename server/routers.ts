@@ -7,6 +7,7 @@ import { catalogRouter } from "./domains/catalog/router";
 import { inventoryRouter } from "./domains/inventory/router";
 import { commerceRouter } from "./domains/commerce/router";
 import { deliveryRouter } from "./domains/delivery/router";
+import { notificationRouter } from "./domains/notification/router";
 
 export const appRouter = router({
   identity: identityRouter,
@@ -19,6 +20,7 @@ export const appRouter = router({
   inventory: inventoryRouter,
   commerce: commerceRouter,
   delivery: deliveryRouter,
+  notification: notificationRouter,
 });
 
 export type AppRouter = typeof appRouter;

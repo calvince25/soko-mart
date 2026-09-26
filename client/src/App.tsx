@@ -14,6 +14,8 @@ import SellerOrders from "./pages/SellerOrders";
 import AdminFulfilment from "./pages/AdminFulfilment";
 import WarehouseWorkspace from "./pages/WarehouseWorkspace";
 import DeliveryWorkspace, { Tracking } from "./pages/Delivery";
+import Notifications from "./pages/Notifications";
+import NotificationAdmin from "./pages/NotificationAdmin";
 
 function Router() {
   return (
@@ -30,6 +32,8 @@ function Router() {
       <Route path="/warehouse" component={WarehouseWorkspace} />
       <Route path="/delivery" component={DeliveryWorkspace} />
       <Route path="/track/:shipmentId" component={Tracking} />
+      <Route path="/notifications" component={Notifications} />
+      <Route path="/admin/notifications" component={NotificationAdmin} />
       <Route path="/seller/catalog" component={Catalog} />
       <Route path="/seller/inventory" component={Inventory} />
       <Route path="/404" component={NotFound} />
