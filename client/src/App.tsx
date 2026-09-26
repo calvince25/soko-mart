@@ -18,6 +18,10 @@ import Notifications from "./pages/Notifications";
 import NotificationAdmin from "./pages/NotificationAdmin";
 import Reviews from "./pages/Reviews";
 import ReviewAdmin from "./pages/ReviewAdmin";
+import Returns from "./pages/Returns";
+import ReturnDetail from "./pages/ReturnDetail";
+import ReturnAdmin from "./pages/ReturnAdmin";
+import SellerReturns from "./pages/SellerReturns";
 
 function Router() {
   return (
@@ -38,6 +42,10 @@ function Router() {
       <Route path="/admin/notifications" component={NotificationAdmin} />
       <Route path="/reviews" component={Reviews} />
       <Route path="/admin/reviews" component={ReviewAdmin} />
+      <Route path="/returns" component={Returns} />
+      <Route path="/returns/:returnId" component={ReturnDetail} />
+      <Route path="/admin/returns" component={ReturnAdmin} />
+      <Route path="/seller/returns" component={SellerReturns} />
       <Route path="/seller/catalog" component={Catalog} />
       <Route path="/seller/inventory" component={Inventory} />
       <Route path="/404" component={NotFound} />

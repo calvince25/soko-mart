@@ -988,6 +988,89 @@ export const reviewMedia = mysqlTable("review_media", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({ reviewIdx: index("idx_review_media_review").on(table.reviewId, table.createdAt), reviewFk: foreignKey({ columns: [table.reviewId], foreignColumns: [reviews.id], name: "fk_review_media_review" }).onDelete("cascade") }));
 
+export const returnPolicies = mysqlTable("return_policies", {
+  id: int("id").autoincrement().primaryKey(),
+  sellerId: int("sellerId"),
+  returnWindowDays: int("returnWindowDays").notNull(),
+  enabled: int("enabled").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ scopeUq: uniqueIndex("uq_return_policy_seller_scope").on(table.sellerId), sellerFk: foreignKey({ columns: [table.sellerId], foreignColumns: [sellers.id], name: "fk_return_policy_seller" }).onDelete("cascade") }));
+
+export const returnRequests = mysqlTable("return_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  returnNumber: varchar("returnNumber", { length: 40 }).notNull(),
+  customerId: int("customerId").notNull(),
+  orderId: int("orderId").notNull(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  status: mysqlEnum("status", ["requested", "approved", "rejected", "in_transit", "received", "inspected", "refund_approved", "refund_processing", "refunded", "closed", "cancelled"]).default("requested").notNull(),
+  reason: mysqlEnum("reason", ["wrong_item", "wrong_size", "damaged", "defective", "not_as_described", "missing_parts", "changed_mind", "duplicate_order", "other"]).notNull(),
+  customerNote: text("customerNote"),
+  rejectionReason: text("rejectionReason"),
+  instructions: text("instructions"),
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  approvedAt: timestamp("approvedAt"),
+  rejectedAt: timestamp("rejectedAt"),
+  receivedAt: timestamp("receivedAt"),
+  inspectedAt: timestamp("inspectedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ numberUq: uniqueIndex("uq_return_requests_number").on(table.returnNumber), customerIdx: index("idx_return_requests_customer_created").on(table.customerId, table.createdAt), sellerIdx: index("idx_return_requests_seller_status").on(table.sellerOrderId, table.status, table.createdAt), orderIdx: index("idx_return_requests_order").on(table.orderId), customerFk: foreignKey({ columns: [table.customerId], foreignColumns: [users.id], name: "fk_return_request_customer" }).onDelete("restrict"), orderFk: foreignKey({ columns: [table.orderId], foreignColumns: [orders.id], name: "fk_return_request_order" }).onDelete("restrict"), sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_return_request_seller_order" }).onDelete("restrict") }));
+
+export const returnItems = mysqlTable("return_items", {
+  id: int("id").autoincrement().primaryKey(),
+  returnRequestId: int("returnRequestId").notNull(),
+  orderItemId: int("orderItemId").notNull(),
+  orderedQuantity: int("orderedQuantity").notNull(),
+  requestedQuantity: int("requestedQuantity").notNull(),
+  approvedQuantity: int("approvedQuantity").default(0).notNull(),
+  receivedQuantity: int("receivedQuantity").default(0).notNull(),
+  refundedQuantity: int("refundedQuantity").default(0).notNull(),
+  disposition: mysqlEnum("disposition", ["pending", "restock", "damaged", "quarantine", "discard"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ requestItemUq: uniqueIndex("uq_return_items_request_item").on(table.returnRequestId, table.orderItemId), itemIdx: index("idx_return_items_order_item").on(table.orderItemId), requestFk: foreignKey({ columns: [table.returnRequestId], foreignColumns: [returnRequests.id], name: "fk_return_item_request" }).onDelete("cascade"), orderItemFk: foreignKey({ columns: [table.orderItemId], foreignColumns: [orderItems.id], name: "fk_return_item_order_item" }).onDelete("restrict") }));
+
+export const returnInspections = mysqlTable("return_inspections", {
+  id: int("id").autoincrement().primaryKey(),
+  returnRequestId: int("returnRequestId").notNull(),
+  inspectedByUserId: int("inspectedByUserId").notNull(),
+  outcome: mysqlEnum("outcome", ["approved", "partial", "rejected"]).notNull(),
+  condition: mysqlEnum("condition", ["resalable", "damaged", "defective", "incomplete", "wrong_item", "unusable"]).notNull(),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ requestIdx: index("idx_return_inspections_request_created").on(table.returnRequestId, table.createdAt), requestFk: foreignKey({ columns: [table.returnRequestId], foreignColumns: [returnRequests.id], name: "fk_return_inspection_request" }).onDelete("cascade"), inspectorFk: foreignKey({ columns: [table.inspectedByUserId], foreignColumns: [users.id], name: "fk_return_inspection_user" }).onDelete("restrict") }));
+
+export const refunds = mysqlTable("refunds", {
+  id: int("id").autoincrement().primaryKey(),
+  refundNumber: varchar("refundNumber", { length: 40 }).notNull(),
+  returnRequestId: int("returnRequestId").notNull(),
+  paymentAttemptId: int("paymentAttemptId").notNull(),
+  customerId: int("customerId").notNull(),
+  amountMinor: int("amountMinor").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  status: mysqlEnum("status", ["approved", "processing", "successful", "failed", "cancelled"]).default("approved").notNull(),
+  provider: mysqlEnum("provider", ["mpesa", "card", "other"]).notNull(),
+  providerReference: varchar("providerReference", { length: 200 }),
+  failureReason: text("failureReason"),
+  idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull(),
+  processedAt: timestamp("processedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ numberUq: uniqueIndex("uq_refunds_number").on(table.refundNumber), keyUq: uniqueIndex("uq_refunds_idempotency").on(table.idempotencyKey), requestUq: uniqueIndex("uq_refunds_return_request").on(table.returnRequestId), requestFk: foreignKey({ columns: [table.returnRequestId], foreignColumns: [returnRequests.id], name: "fk_refund_return_request" }).onDelete("restrict"), paymentFk: foreignKey({ columns: [table.paymentAttemptId], foreignColumns: [paymentAttempts.id], name: "fk_refund_payment_attempt" }).onDelete("restrict"), customerFk: foreignKey({ columns: [table.customerId], foreignColumns: [users.id], name: "fk_refund_customer" }).onDelete("restrict"), statusIdx: index("idx_refunds_status_created").on(table.status, table.createdAt) }));
+
+export const returnEvents = mysqlTable("return_events", {
+  id: int("id").autoincrement().primaryKey(),
+  returnRequestId: int("returnRequestId").notNull(),
+  actorUserId: int("actorUserId"),
+  eventType: varchar("eventType", { length: 100 }).notNull(),
+  previousState: varchar("previousState", { length: 64 }),
+  newState: varchar("newState", { length: 64 }),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ requestIdx: index("idx_return_events_request_created").on(table.returnRequestId, table.createdAt), requestFk: foreignKey({ columns: [table.returnRequestId], foreignColumns: [returnRequests.id], name: "fk_return_event_request" }).onDelete("cascade"), actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_return_event_actor" }).onDelete("set null") }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -1038,6 +1121,12 @@ export type NotificationOutbox = typeof notificationOutbox.$inferSelect;
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type ReviewMedia = typeof reviewMedia.$inferSelect;
+export type ReturnPolicy = typeof returnPolicies.$inferSelect;
+export type ReturnRequest = typeof returnRequests.$inferSelect;
+export type ReturnItem = typeof returnItems.$inferSelect;
+export type ReturnInspection = typeof returnInspections.$inferSelect;
+export type Refund = typeof refunds.$inferSelect;
+export type ReturnEvent = typeof returnEvents.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),

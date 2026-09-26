@@ -1,0 +1,12 @@
+import { z } from "zod";
+const id = z.number().int().positive();
+export const returnItemInputSchema = z.object({ orderItemId: id, quantity: z.number().int().positive() });
+export const returnEligibilitySchema = z.object({ sellerOrderId: id, orderItemId: id });
+export const returnCreateSchema = z.object({ sellerOrderId: id, reason: z.enum(["wrong_item", "wrong_size", "damaged", "defective", "not_as_described", "missing_parts", "changed_mind", "duplicate_order", "other"]), customerNote: z.string().trim().max(2000).optional().nullable(), items: z.array(returnItemInputSchema).min(1).max(50), idempotencyKey: z.string().trim().min(8).max(180) });
+export const returnIdSchema = z.object({ returnId: id });
+export const returnListSchema = z.object({ status: z.enum(["requested", "approved", "rejected", "in_transit", "received", "inspected", "refund_approved", "refund_processing", "refunded", "closed", "cancelled"]).optional(), limit: z.number().int().min(1).max(100).default(50), offset: z.number().int().min(0).default(0) });
+export const returnDecisionSchema = z.object({ returnId: id, approve: z.boolean(), reason: z.string().trim().max(1000).optional().nullable(), instructions: z.string().trim().max(3000).optional().nullable() });
+export const returnStatusSchema = z.object({ returnId: id, status: z.enum(["in_transit", "received", "closed"]), note: z.string().trim().max(1000).optional().nullable() });
+export const inspectionSchema = z.object({ returnId: id, outcome: z.enum(["approved", "partial", "rejected"]), condition: z.enum(["resalable", "damaged", "defective", "incomplete", "wrong_item", "unusable"]), note: z.string().trim().max(2000).optional().nullable(), approvedQuantities: z.array(z.object({ returnItemId: id, quantity: z.number().int().nonnegative() })).max(50).default([]) });
+export const refundIdSchema = z.object({ refundId: id });
+export const refundCreateSchema = z.object({ returnId: id, idempotencyKey: z.string().trim().min(8).max(180) });
