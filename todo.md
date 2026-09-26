@@ -17,3 +17,21 @@
 - [x] Document architecture, event contract, channel/provider status, security, limitations, verification, and Sprint 14 handoff in `docs/SokoMart-sprint-13-notifications.md`.
 - [x] Explicit boundary: no promotions, bulk messaging, support/ticketing, returns/refunds, GPS, route optimization, payouts, or new payment providers.
 - [x] Sprint 14 handoff documented: scheduled outbox worker with leases/dead-letter handling, configured provider adapters/callbacks, secure external OTP delivery, and test-fixture isolation hardening remain the next sprint's implementation scope.
+
+## Sprint 14 — Reviews, Ratings & Reputation
+
+- [x] Add dedicated reviews domain with server-authoritative product and seller review lifecycle.
+- [x] Add transaction-traceable `reviews` and object-storage-reference `review_media` tables in additive migration `0016_yummy_menace`.
+- [x] Enforce paid, non-cancelled, delivered-shipment eligibility from authenticated customer ownership; do not trust client product, seller, delivery, or verified-purchase claims.
+- [x] Prevent duplicates with database-level unique purchase keys and conflict-safe creation.
+- [x] Add controlled own-review edits/removal, mandatory re-moderation after edits, server-computed published-only aggregates, and 10-per-24-hour anti-spam guard.
+- [x] Add seller self-review protection for all seller memberships, not only active members.
+- [x] Add review media reference registration with a six-reference limit; keep bytes outside the database.
+- [x] Add publish/hide/reject moderation with audit events and `review.published` notification integration.
+- [x] Add customer `/reviews` review center and permission-gated `/admin/reviews` moderation workspace with mobile verification.
+- [x] Add review RBAC permissions and rerun idempotent foundation seeding.
+- [x] Add Sprint 14 boundary tests; focused suite 16 passed and full suite 89 passed across 19 files.
+- [x] Verify typecheck, production build, migration alignment, active database tables/indexes, dev health, desktop, and 375px mobile UI.
+- [x] Document architecture, eligibility/returns policy, moderation, media boundary, verification, limitations, and Sprint 15 handoff in `docs/SokoMart-sprint-14-reviews.md`.
+- [x] Explicit boundary: no invented returns system, review replies, helpful votes, appeals, asynchronous media moderation, or advanced fraud scoring.
+- [x] Sprint 15 handoff documented: returns/refund eligibility hook, signed media upload workflow, seller replies, and stronger fraud/rate-limit signals.

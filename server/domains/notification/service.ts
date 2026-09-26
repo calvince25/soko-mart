@@ -23,6 +23,7 @@ const templates: Record<string, Template> = {
   shipment_status_customer: { code: "shipment_status_customer", category: "transactional", title: "Delivery update", body: "Your order {{orderNumber}} is now {{status}}.", path: "/track/{{shipmentId}}" },
   delivery_failed_logistics: { code: "delivery_failed_logistics", category: "operational", title: "Delivery exception", body: "Delivery for shipment {{trackingNumber}} needs attention.", path: "/delivery" },
   delivery_otp_customer: { code: "delivery_otp_customer", category: "security", title: "Your SokoMart delivery PIN", body: "Use your delivery PIN to confirm handover. It expires soon.", path: "/track/{{shipmentId}}" },
+  review_published_customer: { code: "review_published_customer", category: "transactional", title: "Your review is live", body: "Thanks for sharing your verified SokoMart experience.", path: "/reviews" },
 };
 
 async function getDatabase() { const db = await getDb(); if (!db) throw invalidState("Notification services are temporarily unavailable."); return db; }
@@ -39,6 +40,7 @@ function templateFor(eventType: string, recipientType: string): Template | null 
   if (eventType === "shipment.picked_up" || eventType === "shipment.in_transit" || eventType === "shipment.out_for_delivery" || eventType === "shipment.delivered" || eventType === "shipment.delivery_attempted") return recipientType === "customer" ? templates.shipment_status_customer : null;
   if (eventType === "shipment.delivery_failed" || eventType === "shipment.returned_to_warehouse") return ["staff", "admin", "courier"].includes(recipientType) ? templates.delivery_failed_logistics : null;
   if (eventType === "delivery.otp_issued") return recipientType === "customer" ? templates.delivery_otp_customer : null;
+  if (eventType === "review.published") return recipientType === "customer" ? templates.review_published_customer : null;
   return null;
 }
 

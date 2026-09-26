@@ -76,6 +76,10 @@ export const PERMISSION_CODES = [
   "notification.preferences.update",
   "notification.manage",
   "notification.retry",
+  "review.read",
+  "review.create",
+  "review.update_own",
+  "review.moderate",
   "support.ticket.read",
   "support.ticket.assign",
   "platform.audit.read",
@@ -134,6 +138,10 @@ export const PERMISSION_DEFINITIONS: Record<PermissionCode, { name: string; desc
   "notification.preferences.update": { name: "Update notification preferences", description: "Update non-critical communication preferences." },
   "notification.manage": { name: "Monitor notifications", description: "Monitor notification volume, channels, failures, and delivery history." },
   "notification.retry": { name: "Retry notifications", description: "Retry authorized failed notification deliveries." },
+  "review.read": { name: "Read reviews", description: "Read published reviews and authorized review context." },
+  "review.create": { name: "Create reviews", description: "Submit reviews for verified delivered purchases." },
+  "review.update_own": { name: "Update own reviews", description: "Edit or withdraw reviews owned by the authenticated customer." },
+  "review.moderate": { name: "Moderate reviews", description: "Approve, reject, hide, or remove reviews with an audit trail." },
   "support.ticket.read": { name: "Read support tickets", description: "Read support cases in allowed scope." },
   "support.ticket.assign": { name: "Assign support tickets", description: "Assign and route support cases." },
   "platform.audit.read": { name: "Read audit logs", description: "Read audit records." },
@@ -172,6 +180,7 @@ const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     "notification.read",
     "notification.manage",
     "notification.retry",
+    "review.moderate",
     "platform.audit.read",
   ],
   product_manager: [
@@ -208,9 +217,10 @@ const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     "seller.order.fulfill_own",
     "notification.read",
     "notification.preferences.update",
+    "review.read",
   ],
   courier: ["logistics.shipment.read", "logistics.shipment.update", "logistics.shipment.deliver", "notification.read", "notification.preferences.update"],
-  customer: ["identity.profile.read", "identity.profile.update", "order.read_own", "notification.read", "notification.preferences.update"],
+  customer: ["identity.profile.read", "identity.profile.update", "order.read_own", "notification.read", "notification.preferences.update", "review.read", "review.create", "review.update_own"],
 };
 
 export function permissionsForRole(role: RoleCode): readonly PermissionCode[] {

@@ -941,6 +941,53 @@ export const notificationDeliveryAttempts = mysqlTable("notification_delivery_at
   attemptedAt: timestamp("attemptedAt").defaultNow().notNull(),
 }, (table) => ({ attemptUq: uniqueIndex("uq_notification_delivery_attempt").on(table.notificationId, table.attemptNumber), notificationIdx: index("idx_notification_delivery_attempts_notification").on(table.notificationId, table.attemptedAt), notificationFk: foreignKey({ columns: [table.notificationId], foreignColumns: [notifications.id], name: "fk_notification_delivery_attempt_notification" }).onDelete("cascade") }));
 
+export const reviews = mysqlTable("reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customerId").notNull(),
+  targetType: mysqlEnum("targetType", ["product", "seller"]).notNull(),
+  productId: int("productId"),
+  sellerId: int("sellerId").notNull(),
+  orderId: int("orderId").notNull(),
+  sellerOrderId: int("sellerOrderId").notNull(),
+  orderItemId: int("orderItemId"),
+  purchaseKey: varchar("purchaseKey", { length: 180 }).notNull(),
+  rating: int("rating").notNull(),
+  title: varchar("title", { length: 180 }),
+  reviewText: text("reviewText").notNull(),
+  status: mysqlEnum("status", ["pending", "published", "rejected", "hidden", "removed"]).default("pending").notNull(),
+  verifiedPurchase: int("verifiedPurchase").default(1).notNull(),
+  publishedAt: timestamp("publishedAt"),
+  moderatedAt: timestamp("moderatedAt"),
+  moderatedBy: int("moderatedBy"),
+  moderationReason: text("moderationReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  purchaseUq: uniqueIndex("uq_reviews_purchase_key").on(table.purchaseKey),
+  customerIdx: index("idx_reviews_customer_created").on(table.customerId, table.createdAt),
+  productIdx: index("idx_reviews_product_status_created").on(table.productId, table.status, table.createdAt),
+  sellerIdx: index("idx_reviews_seller_status_created").on(table.sellerId, table.status, table.createdAt),
+  orderIdx: index("idx_reviews_order_item").on(table.orderId, table.orderItemId),
+  customerFk: foreignKey({ columns: [table.customerId], foreignColumns: [users.id], name: "fk_review_customer" }).onDelete("restrict"),
+  productFk: foreignKey({ columns: [table.productId], foreignColumns: [catalogProducts.id], name: "fk_review_product" }).onDelete("restrict"),
+  sellerFk: foreignKey({ columns: [table.sellerId], foreignColumns: [sellers.id], name: "fk_review_seller" }).onDelete("restrict"),
+  orderFk: foreignKey({ columns: [table.orderId], foreignColumns: [orders.id], name: "fk_review_order" }).onDelete("restrict"),
+  sellerOrderFk: foreignKey({ columns: [table.sellerOrderId], foreignColumns: [orderSellerOrders.id], name: "fk_review_seller_order" }).onDelete("restrict"),
+  orderItemFk: foreignKey({ columns: [table.orderItemId], foreignColumns: [orderItems.id], name: "fk_review_order_item" }).onDelete("restrict"),
+  moderatorFk: foreignKey({ columns: [table.moderatedBy], foreignColumns: [users.id], name: "fk_review_moderator" }).onDelete("set null"),
+}));
+
+export const reviewMedia = mysqlTable("review_media", {
+  id: int("id").autoincrement().primaryKey(),
+  reviewId: int("reviewId").notNull(),
+  storageKey: varchar("storageKey", { length: 1024 }).notNull(),
+  mediaType: mysqlEnum("mediaType", ["image", "video"]).default("image").notNull(),
+  originalFilename: varchar("originalFilename", { length: 255 }).notNull(),
+  mimeType: varchar("mimeType", { length: 120 }).notNull(),
+  fileSize: int("fileSize").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({ reviewIdx: index("idx_review_media_review").on(table.reviewId, table.createdAt), reviewFk: foreignKey({ columns: [table.reviewId], foreignColumns: [reviews.id], name: "fk_review_media_review" }).onDelete("cascade") }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -989,6 +1036,8 @@ export type NotificationPreference = typeof notificationPreferences.$inferSelect
 export type Notification = typeof notifications.$inferSelect;
 export type NotificationOutbox = typeof notificationOutbox.$inferSelect;
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
+export type Review = typeof reviews.$inferSelect;
+export type ReviewMedia = typeof reviewMedia.$inferSelect;
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
@@ -1094,3 +1143,5 @@ export const paymentReservationsRelations = relations(paymentReservations, ({ on
 export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({ user: one(users, { fields: [notificationPreferences.userId], references: [users.id] }) }));
 export const notificationsRelations = relations(notifications, ({ one, many }) => ({ user: one(users, { fields: [notifications.userId], references: [users.id] }), deliveryAttempts: many(notificationDeliveryAttempts) }));
 export const notificationDeliveryAttemptsRelations = relations(notificationDeliveryAttempts, ({ one }) => ({ notification: one(notifications, { fields: [notificationDeliveryAttempts.notificationId], references: [notifications.id] }) }));
+export const reviewsRelations = relations(reviews, ({ one, many }) => ({ customer: one(users, { fields: [reviews.customerId], references: [users.id] }), product: one(catalogProducts, { fields: [reviews.productId], references: [catalogProducts.id] }), seller: one(sellers, { fields: [reviews.sellerId], references: [sellers.id] }), order: one(orders, { fields: [reviews.orderId], references: [orders.id] }), sellerOrder: one(orderSellerOrders, { fields: [reviews.sellerOrderId], references: [orderSellerOrders.id] }), orderItem: one(orderItems, { fields: [reviews.orderItemId], references: [orderItems.id] }), moderator: one(users, { fields: [reviews.moderatedBy], references: [users.id] }), media: many(reviewMedia) }));
+export const reviewMediaRelations = relations(reviewMedia, ({ one }) => ({ review: one(reviews, { fields: [reviewMedia.reviewId], references: [reviews.id] }) }));

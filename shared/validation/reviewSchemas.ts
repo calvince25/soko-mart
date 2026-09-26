@@ -1,0 +1,15 @@
+import { z } from "zod";
+const id = z.number().int().positive();
+const content = z.object({ rating: z.number().int().min(1).max(5), title: z.string().trim().max(180).optional().nullable(), reviewText: z.string().trim().min(10).max(5000) });
+export const productEligibilitySchema = z.object({ orderItemId: id });
+export const sellerEligibilitySchema = z.object({ sellerOrderId: id });
+export const productReviewCreateSchema = productEligibilitySchema.merge(content);
+export const sellerReviewCreateSchema = sellerEligibilitySchema.merge(content);
+export const reviewUpdateSchema = z.object({ reviewId: id }).merge(content);
+export const reviewIdSchema = z.object({ reviewId: id });
+export const publicReviewListSchema = z.object({ productId: id, limit: z.number().int().min(1).max(50).default(10), offset: z.number().int().min(0).default(0) });
+export const publicSellerReviewListSchema = z.object({ sellerId: id, limit: z.number().int().min(1).max(50).default(10), offset: z.number().int().min(0).default(0) });
+export const reviewSummarySchema = z.object({ targetType: z.enum(["product", "seller"]), targetId: id });
+export const moderationListSchema = z.object({ status: z.enum(["pending", "published", "rejected", "hidden"]).optional(), limit: z.number().int().min(1).max(100).default(50), offset: z.number().int().min(0).default(0) });
+export const moderateReviewSchema = z.object({ reviewId: id, status: z.enum(["published", "rejected", "hidden", "removed"]), reason: z.string().trim().max(1000).optional().nullable() });
+export const addReviewMediaSchema = z.object({ reviewId: id, storageKey: z.string().trim().min(1).max(1024), mediaType: z.enum(["image", "video"]), originalFilename: z.string().trim().min(1).max(255), mimeType: z.string().trim().min(1).max(120), fileSize: z.number().int().positive().max(20_000_000) });
