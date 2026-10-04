@@ -1,16 +1,16 @@
 
-## Sprint 15 — Returns, Inspections & Refunds
+## Sprint 16 — Support & Dispute Resolution
 
-- [x] Add return policy, request, item quantity, inspection, refund, and immutable return-event tables in additive migration `0017_useful_blindfold`.
-- [x] Enforce server-authoritative eligibility: paid order, authenticated customer ownership, delivered shipment, open policy window, and remaining item quantity.
-- [x] Add partial-quantity returns, single-seller-order grouping, idempotency keys, duplicate protection, and return state-machine guards.
-- [x] Add customer request/history/detail, seller-scoped visibility, and operations/finance procedures with dedicated RBAC permissions.
-- [x] Add approval/rejection, receiving, inspection outcomes, item dispositions, refund approval, and provider-neutral refund processing.
-- [x] Preserve provider honesty: unconfigured refund providers remain processing and cannot fabricate success or provider references.
-- [x] Connect return/refund status events to the notification outbox and audit trail.
-- [x] Add `/returns`, `/returns/:returnId`, `/seller/returns`, and `/admin/returns` responsive workspaces.
-- [x] Add Sprint 15 tests: focused neighboring suite 22/22 passed; full regression 95/95 passed across 20 files.
-- [x] Verify typecheck, production build, schema generation, migration application, permissions seed, database health, desktop screenshots, and 375px mobile screenshots.
-- [x] Document architecture, eligibility, state machine, security, provider/inventory boundaries, verification, and Sprint 16 handoff in `docs/SokoMart-sprint-15-returns-refunds.md`.
-- [x] Explicit boundary: real provider refund callbacks and warehouse inventory disposition movements remain adapter/integration work, with no silent inventory deduction or fake payment success.
-- [x] Sprint 16 handoff documented: authenticated M-Pesa refund callbacks, return receiving and append-only stock movements, reverse logistics labels, seller-configurable policy exclusions, and SLA escalation.
+- [x] Add support ticket, message, assignment, event, evidence-reference, and SLA policy tables in additive migration `0018_hard_shard`.
+- [x] Add support categories, priorities, lifecycle state machine, transaction context, idempotency, assignment, SLA timestamps, and immutable event history.
+- [x] Add customer case creation/history/detail, secure replies, and internal-note separation.
+- [x] Add seller-scoped visibility derived from active seller membership and seller-order ownership.
+- [x] Add permission-gated support queue, assignment, status changes, escalation, evidence references, SLA breaches, and policy procedures.
+- [x] Add notification templates and outbox routing for support case creation, messages, and status changes.
+- [x] Add `/support`, `/support/:ticketId`, `/seller/support`, and `/admin/support` responsive surfaces.
+- [x] Add dedicated RBAC permissions for customer creation, messaging, seller visibility, queue management, resolution, evidence, escalation, and SLA policy management.
+- [x] Add Sprint 16 focused regression suite: 18/18 passed across notification, returns, and support boundaries.
+- [x] Verify `pnpm check`, `pnpm build`, migration generation, permission seeding, and active database presence of all six `support_*` tables.
+- [x] Document architecture, authorization, state machine, UI, verification, explicit boundaries, and Sprint 17 handoff in `docs/SokoMart-sprint-16-support-disputes.md`.
+- [x] Explicit boundary: no fake email/SMS delivery, telephony, AI classification, automated refund callbacks, reverse-logistics inventory posting, or legal chargeback adjudication.
+- [x] Sprint 17 handoff documented: outbox worker leases/dead letters, provider callbacks, seller SLA automation, dispute evidence/inventory linkage, analytics, CSAT, and attachment orchestration.

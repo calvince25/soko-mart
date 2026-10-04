@@ -10,6 +10,7 @@ import { deliveryRouter } from "./domains/delivery/router";
 import { notificationRouter } from "./domains/notification/router";
 import { reviewRouter } from "./domains/review/router";
 import { returnsRouter } from "./domains/returns/router";
+import { supportRouter } from "./domains/support/router";
 
 export const appRouter = router({
   identity: identityRouter,
@@ -25,6 +26,7 @@ export const appRouter = router({
   notification: notificationRouter,
   review: reviewRouter,
   returns: returnsRouter,
+  support: supportRouter,
 });
 
 export type AppRouter = typeof appRouter;

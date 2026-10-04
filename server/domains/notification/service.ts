@@ -26,6 +26,9 @@ const templates: Record<string, Template> = {
   review_published_customer: { code: "review_published_customer", category: "transactional", title: "Your review is live", body: "Thanks for sharing your verified SokoMart experience.", path: "/reviews" },
   return_status_customer: { code: "return_status_customer", category: "transactional", title: "Return update", body: "Your return {{returnNumber}} is now {{status}}.", path: "/returns" },
   refund_status_customer: { code: "refund_status_customer", category: "transactional", title: "Refund update", body: "Your refund for return {{returnNumber}} is now {{status}}.", path: "/returns" },
+  support_ticket_staff: { code: "support_ticket_staff", category: "operational", title: "New support case", body: "Support case {{ticketNumber}} needs attention.", path: "/admin/support" },
+  support_message_customer: { code: "support_message_customer", category: "transactional", title: "Support case updated", body: "There is a new message on support case {{ticketNumber}}.", path: "/support/{{ticketId}}" },
+  support_status_customer: { code: "support_status_customer", category: "transactional", title: "Support case update", body: "Support case {{ticketNumber}} is now {{status}}.", path: "/support/{{ticketId}}" },
 };
 
 async function getDatabase() { const db = await getDb(); if (!db) throw invalidState("Notification services are temporarily unavailable."); return db; }
@@ -45,6 +48,9 @@ function templateFor(eventType: string, recipientType: string): Template | null 
   if (eventType === "review.published") return recipientType === "customer" ? templates.review_published_customer : null;
   if (eventType.startsWith("return.")) return recipientType === "customer" ? templates.return_status_customer : null;
   if (eventType.startsWith("refund.")) return recipientType === "customer" ? templates.refund_status_customer : null;
+  if (eventType === "support.ticket.created") return ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
+  if (eventType === "support.message.added") return recipientType === "customer" ? templates.support_message_customer : ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
+  if (eventType.startsWith("support.ticket.")) return recipientType === "customer" ? templates.support_status_customer : ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
   return null;
 }
 
@@ -61,7 +67,7 @@ async function recipientUsers(database: any, event: NotificationEvent) {
   if (payload.courierId) { const [courier] = await database.select({ userId: couriers.userId }).from(couriers).where(eq(couriers.id, Number(payload.courierId))).limit(1); if (courier) add(courier.userId, "courier"); }
   if (payload.warehouseId) { const rows = await database.select({ userId: warehouseUserAssignments.userId }).from(warehouseUserAssignments).where(and(eq(warehouseUserAssignments.warehouseId, Number(payload.warehouseId)), eq(warehouseUserAssignments.status, "active"))); rows.forEach((r: any) => add(r.userId, "staff")); }
   if (payload.orderId && !payload.customerUserId) { const [order] = await database.select({ userId: orders.userId }).from(orders).where(eq(orders.id, Number(payload.orderId))).limit(1); if (order) add(order.userId, "customer"); }
-  if (payload.adminAlert) { const admins = await database.select({ userId: userRoles.userId }).from(userRoles).innerJoin(roles, eq(userRoles.roleId, roles.id)).where(or(eq(roles.code, "super_admin"), eq(roles.code, "marketplace_admin"), eq(roles.code, "logistics_manager"))); admins.forEach((r: any) => add(r.userId, "admin")); }
+  if (payload.adminAlert) { const admins = await database.select({ userId: userRoles.userId }).from(userRoles).innerJoin(roles, eq(userRoles.roleId, roles.id)).where(or(eq(roles.code, "super_admin"), eq(roles.code, "marketplace_admin"), eq(roles.code, "customer_support"), eq(roles.code, "logistics_manager"))); admins.forEach((r: any) => add(r.userId, "admin")); }
   return recipients;
 }
 

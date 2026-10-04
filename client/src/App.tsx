@@ -22,6 +22,9 @@ import Returns from "./pages/Returns";
 import ReturnDetail from "./pages/ReturnDetail";
 import ReturnAdmin from "./pages/ReturnAdmin";
 import SellerReturns from "./pages/SellerReturns";
+import Support from "./pages/Support";
+import SupportAdmin from "./pages/SupportAdmin";
+import SellerSupport from "./pages/SellerSupport";
 
 function Router() {
   return (
@@ -46,6 +49,10 @@ function Router() {
       <Route path="/returns/:returnId" component={ReturnDetail} />
       <Route path="/admin/returns" component={ReturnAdmin} />
       <Route path="/seller/returns" component={SellerReturns} />
+      <Route path="/support" component={Support} />
+      <Route path="/support/:ticketId" component={Support} />
+      <Route path="/admin/support" component={SupportAdmin} />
+      <Route path="/seller/support" component={SellerSupport} />
       <Route path="/seller/catalog" component={Catalog} />
       <Route path="/seller/inventory" component={Inventory} />
       <Route path="/404" component={NotFound} />

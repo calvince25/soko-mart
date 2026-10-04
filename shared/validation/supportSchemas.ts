@@ -1,0 +1,12 @@
+import { z } from "zod";
+const id = z.number().int().positive();
+export const supportListSchema = z.object({ status: z.enum(["open","pending_customer","pending_seller","in_progress","escalated","resolved","closed","reopened"]).optional(), limit: z.number().int().min(1).max(100).default(50), offset: z.number().int().min(0).default(0) });
+export const createSupportTicketSchema = z.object({ category: z.enum(["order_issue","payment_issue","delivery_issue","product_issue","seller_issue","return_issue","refund_issue","account_issue","technical_issue","other"]), priority: z.enum(["low","normal","high","urgent"]).default("normal"), subject: z.string().trim().min(3).max(240), description: z.string().trim().min(3).max(10000), idempotencyKey: z.string().trim().min(8).max(180), context: z.object({ orderId: id.optional(), sellerOrderId: id.optional(), shipmentId: id.optional(), returnRequestId: id.optional(), refundId: id.optional() }).default({}) });
+export const supportIdSchema = z.object({ ticketId: id });
+export const addSupportMessageSchema = z.object({ ticketId: id, body: z.string().trim().min(1).max(10000), internal: z.boolean().default(false) });
+export const updateSupportStatusSchema = z.object({ ticketId: id, status: z.enum(["open","pending_customer","pending_seller","in_progress","escalated","resolved","closed","reopened"]), note: z.string().trim().max(2000).optional().nullable() });
+export const assignSupportSchema = z.object({ ticketId: id, agentUserId: id.optional().nullable(), team: z.string().trim().max(80).optional().nullable() });
+export const escalateSupportSchema = z.object({ ticketId: id, team: z.string().trim().max(80).optional().nullable(), note: z.string().trim().min(1).max(2000) });
+export const supportEvidenceSchema = z.object({ ticketId: id, storageKey: z.string().trim().min(3).max(500), url: z.string().url().max(700), fileName: z.string().trim().min(1).max(240), mimeType: z.enum(["image/jpeg","image/png","image/webp","application/pdf","video/mp4"]), sizeBytes: z.number().int().positive().max(10000000) });
+export const supportSlaListSchema = z.object({ limit: z.number().int().min(1).max(100).default(50) });
+export const supportSlaPolicySchema = z.object({ priority: z.enum(["low","normal","high","urgent"]), firstResponseMinutes: z.number().int().positive(), resolutionMinutes: z.number().int().positive() });
