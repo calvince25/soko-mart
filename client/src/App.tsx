@@ -25,6 +25,7 @@ import SellerReturns from "./pages/SellerReturns";
 import Support from "./pages/Support";
 import SupportAdmin from "./pages/SupportAdmin";
 import SellerSupport from "./pages/SellerSupport";
+import Finance from "./pages/Finance";
 
 function Router() {
   return (
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/support/:ticketId" component={Support} />
       <Route path="/admin/support" component={SupportAdmin} />
       <Route path="/seller/support" component={SellerSupport} />
+      <Route path="/seller/finance" component={Finance} />
       <Route path="/seller/catalog" component={Catalog} />
       <Route path="/seller/inventory" component={Inventory} />
       <Route path="/404" component={NotFound} />

@@ -1,16 +1,18 @@
 
-## Sprint 16 — Support & Dispute Resolution
+## Sprint 17 — Finance, Commission & Settlement Accounting
 
-- [x] Add support ticket, message, assignment, event, evidence-reference, and SLA policy tables in additive migration `0018_hard_shard`.
-- [x] Add support categories, priorities, lifecycle state machine, transaction context, idempotency, assignment, SLA timestamps, and immutable event history.
-- [x] Add customer case creation/history/detail, secure replies, and internal-note separation.
-- [x] Add seller-scoped visibility derived from active seller membership and seller-order ownership.
-- [x] Add permission-gated support queue, assignment, status changes, escalation, evidence references, SLA breaches, and policy procedures.
-- [x] Add notification templates and outbox routing for support case creation, messages, and status changes.
-- [x] Add `/support`, `/support/:ticketId`, `/seller/support`, and `/admin/support` responsive surfaces.
-- [x] Add dedicated RBAC permissions for customer creation, messaging, seller visibility, queue management, resolution, evidence, escalation, and SLA policy management.
-- [x] Add Sprint 16 focused regression suite: 18/18 passed across notification, returns, and support boundaries.
-- [x] Verify `pnpm check`, `pnpm build`, migration generation, permission seeding, and active database presence of all six `support_*` tables.
-- [x] Document architecture, authorization, state machine, UI, verification, explicit boundaries, and Sprint 17 handoff in `docs/SokoMart-sprint-16-support-disputes.md`.
-- [x] Explicit boundary: no fake email/SMS delivery, telephony, AI classification, automated refund callbacks, reverse-logistics inventory posting, or legal chargeback adjudication.
-- [x] Sprint 17 handoff documented: outbox worker leases/dead letters, provider callbacks, seller SLA automation, dispute evidence/inventory linkage, analytics, CSAT, and attachment orchestration.
+- [x] Add immutable double-entry finance accounts, transactions, debit/credit entries, unique transaction references, and idempotency keys.
+- [x] Recognize successful paid orders after authoritative order finalization with balanced seller entitlement, commission, clearing, and platform fee/shipping/tax entries.
+- [x] Add basis-point commission rules with seller/category/product scope, priority, and immutable calculation snapshots.
+- [x] Add seller finance summaries for gross, commission, holds, settled, available, and pending amounts.
+- [x] Add audited seller holds and controlled manual adjustments; support cases cannot directly mutate financial balances.
+- [x] Add settlement periods and seller settlement snapshots with seller-period uniqueness and duplicate-settlement protection.
+- [x] Add provider-neutral payout contract that explicitly refuses to fake unconfigured transfers.
+- [x] Add finance RBAC permissions and idempotent role seeding for ledger, rules, holds, adjustments, and settlement operations.
+- [x] Add `/seller/finance` seller workspace for accounting visibility without promising payout execution.
+- [x] Add Sprint 17 focused regression coverage: 5/5 finance tests; 18/18 finance + returns + support tests.
+- [x] Run typecheck, production build, migration generation, active database table verification, and permission seed.
+- [x] Document Sprint 17 in `docs/SokoMart-sprint-17-finance-settlements.md`.
+- [x] Explicitly defer provider-backed payouts, successful-refund reversal postings, scheduled settlement workers, tax invoices, chargebacks, FX, and reconciliation exports to Sprint 18.
+- [x] Record the broader regression caveat: earlier Sprint 8–10 suites have shared fixed-phone/reused-database fixture cleanup collisions when run against a non-isolated database; Sprint 17 focused paths pass.
+- [x] Sprint 18 handoff documented: payout beneficiary onboarding/provider callbacks, refund ledger reversals, settlement worker leases, and fixture isolation hardening.

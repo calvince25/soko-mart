@@ -28,6 +28,7 @@ import { toAddressSnapshot } from "../account/service";
 import { convertReservationForOrder } from "../inventory/service";
 import { finalizePurchasedCartLines } from "../commerce/cart/service";
 import { emitOrderCreated } from "./events";
+import { recognizeOrderPayment } from "../finance/service";
 import type { AdminOrderSearchInput } from "../../../shared/validation/orderSchemas";
 import type { FulfilmentState } from "../../../shared/validation/orderSchemas";
 
@@ -116,6 +117,7 @@ export async function createOrderFromSuccessfulPayment(userId: number, paymentId
   });
   if (!result.order) throw invalidState("Order creation returned no order.");
   if (!result.existing) emitOrderCreated({ orderId: result.order.id, orderNumber: result.order.orderNumber, userId, paymentAttemptId: paymentId, sellerOrderIds: result.sellerOrderIds });
+  if (!result.existing) await recognizeOrderPayment(result.order.id);
   const db = await database();
   return hydrateOrder(db, result.order);
 }

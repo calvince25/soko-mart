@@ -1,0 +1,12 @@
+import { describe, expect, it } from "vitest";
+import { appRouter } from "./routers";
+import type { TrpcContext } from "./_core/context";
+const user={id:991701,openId:"finance-test",name:"Finance Test",email:"finance@test.local",loginMethod:"test",role:"user" as const,createdAt:new Date(),updatedAt:new Date(),lastSignedIn:new Date()};
+function ctx(permissions:string[]=[],currentUser:any=user):TrpcContext{return {user:currentUser,permissions:new Set(permissions),req:{protocol:"https",headers:{}} as any,res:{} as any};}
+describe("Sprint 17 finance boundaries",()=>{
+ it("requires authentication for ledger access",async()=>{const c=appRouter.createCaller({...ctx(),user:null});await expect(c.finance.ledger({limit:10,offset:0})).rejects.toMatchObject({code:"UNAUTHORIZED"});});
+ it("requires finance permissions for ledger and settlements",async()=>{const c=appRouter.createCaller(ctx());await expect(c.finance.ledger({limit:10,offset:0})).rejects.toMatchObject({code:"FORBIDDEN"});await expect(c.finance.createSettlement({sellerId:1,periodId:1,idempotencyKey:"settlement-test-001"})).rejects.toMatchObject({code:"FORBIDDEN"});});
+ it("rejects unsafe commission and adjustment inputs",async()=>{const c=appRouter.createCaller(ctx(["finance.commission.manage","finance.adjustment.create"]));await expect(c.finance.createCommissionRule({sellerId:null,categoryId:null,productId:null,rateBasisPoints:10001,priority:1,currency:"KES"})).rejects.toMatchObject({code:"BAD_REQUEST"});await expect(c.finance.createAdjustment({sellerId:1,amountMinor:0,currency:"KES",reason:"bad",reference:"x",idempotencyKey:"finance-test-001"})).rejects.toMatchObject({code:"BAD_REQUEST"});});
+ it("requires dedicated hold and commission permissions",async()=>{const c=appRouter.createCaller(ctx(["finance.ledger.read"]));await expect(c.finance.createHold({sellerId:1,amountMinor:100,currency:"KES",reason:"risk",referenceType:"support",referenceId:1})).rejects.toMatchObject({code:"FORBIDDEN"});await expect(c.finance.createCommissionRule({sellerId:null,categoryId:null,productId:null,rateBasisPoints:1000,priority:1,currency:"KES"})).rejects.toMatchObject({code:"FORBIDDEN"});});
+ it("exposes the immutable finance API surface",()=>{for(const key of ["finance.ledger","finance.sellerSummary","finance.createCommissionRule","finance.createHold","finance.createAdjustment","finance.createSettlement"])expect(appRouter._def.procedures[key]).toBeDefined();});
+});
