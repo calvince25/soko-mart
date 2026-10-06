@@ -6,6 +6,18 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
+/**
+ * The integrated WebDev preview is HTTP-only, so the Vite browser client must
+ * not be injected: it attempts an HMR websocket even when `server.hmr` is
+ * disabled by the middleware configuration.
+ */
+export function stripViteClientScript(html: string): string {
+  return html.replace(
+    /<script\b[^>]*\bsrc=["']\/@vite\/client["'][^>]*><\/script>\s*/i,
+    ""
+  );
+}
+
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -42,7 +54,7 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const page = stripViteClientScript(await vite.transformIndexHtml(url, template));
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
