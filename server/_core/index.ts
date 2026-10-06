@@ -65,6 +65,11 @@ async function startServer() {
       createContext,
     })
   );
+  // API failures must remain JSON-parsable; never serve the Vite HTML shell
+  // for an unmatched or interrupted tRPC request.
+  app.use("/api/trpc", (_req, res) => {
+    res.status(404).json({ error: { message: "tRPC procedure not found", code: "NOT_FOUND" } });
+  });
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

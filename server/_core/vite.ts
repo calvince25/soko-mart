@@ -9,7 +9,9 @@ import viteConfig from "../../vite.config";
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    // WebDev terminates HTTPS and proxies the public port to this integrated
+    // HTTP server. Keep the browser on the public secure origin for HMR.
+    hmr: { server, protocol: "wss" as const, clientPort: 3000 },
     allowedHosts: true as const,
   };
 
