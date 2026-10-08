@@ -28,4 +28,4 @@
 - [x] Keep the provider payout boundary explicitly unconfigured; no fake payout success or real transfer is attempted.
 - [x] Generate/apply migrations `0020_nostalgic_hellcat.sql` and `0021_rare_jazinda.sql`; validate focused tests, typecheck, and production build.
 - [x] Document Sprint 18 in `docs/SokoMart-sprint-18-beneficiaries.md`.
-- [ ] Defer real M-Pesa verification/B2C payout callbacks, settlement worker leases, refund reversal postings, and legacy parallel-fixture isolation to the next finance hardening sprint.
+- [x] Defer real M-Pesa verification/B2C payout callbacks, settlement worker leases, refund reversal postings, and legacy parallel-fixture isolation to the next finance hardening sprint; no provider success is simulated in Sprint 18.
