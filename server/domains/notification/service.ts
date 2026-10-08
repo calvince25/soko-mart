@@ -29,6 +29,7 @@ const templates: Record<string, Template> = {
   support_ticket_staff: { code: "support_ticket_staff", category: "operational", title: "New support case", body: "Support case {{ticketNumber}} needs attention.", path: "/admin/support" },
   support_message_customer: { code: "support_message_customer", category: "transactional", title: "Support case updated", body: "There is a new message on support case {{ticketNumber}}.", path: "/support/{{ticketId}}" },
   support_status_customer: { code: "support_status_customer", category: "transactional", title: "Support case update", body: "Support case {{ticketNumber}} is now {{status}}.", path: "/support/{{ticketId}}" },
+  beneficiary_status_seller: { code: "beneficiary_status_seller", category: "security", title: "Payout account update", body: "Your payout account {{maskedDestination}} is now {{status}}.", path: "/seller/finance" },
 };
 
 async function getDatabase() { const db = await getDb(); if (!db) throw invalidState("Notification services are temporarily unavailable."); return db; }
@@ -51,6 +52,7 @@ function templateFor(eventType: string, recipientType: string): Template | null 
   if (eventType === "support.ticket.created") return ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
   if (eventType === "support.message.added") return recipientType === "customer" ? templates.support_message_customer : ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
   if (eventType.startsWith("support.ticket.")) return recipientType === "customer" ? templates.support_status_customer : ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
+  if (eventType === "beneficiary.status_changed") return recipientType === "seller" ? templates.beneficiary_status_seller : null;
   return null;
 }
 

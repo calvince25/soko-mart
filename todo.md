@@ -16,3 +16,16 @@
 - [x] Explicitly defer provider-backed payouts, successful-refund reversal postings, scheduled settlement workers, tax invoices, chargebacks, FX, and reconciliation exports to Sprint 18.
 - [x] Record the broader regression caveat: earlier Sprint 8–10 suites have shared fixed-phone/reused-database fixture cleanup collisions when run against a non-isolated database; Sprint 17 focused paths pass.
 - [x] Sprint 18 handoff documented: payout beneficiary onboarding/provider callbacks, refund ledger reversals, settlement worker leases, and fixture isolation hardening.
+
+## Sprint 18 — Seller payout beneficiary onboarding
+
+- [x] Add seller-owned M-Pesa/mobile-money beneficiary records with masked destinations and HMAC fingerprints; never store PINs or provider secrets.
+- [x] Add server-controlled DRAFT, PENDING_VERIFICATION, VERIFIED, SUSPENDED, DEACTIVATED, and REJECTED lifecycle transitions.
+- [x] Add immutable beneficiary lifecycle events and transaction-bound audit records.
+- [x] Enforce seller ownership, approved/verified seller checks, finance-staff/owner membership checks, and IDOR-safe beneficiary procedures.
+- [x] Enforce at most one verified primary beneficiary per seller with a nullable unique database constraint.
+- [x] Add finance RBAC permissions, security notifications/outbox integration, and authenticated `/seller/finance` onboarding UI.
+- [x] Keep the provider payout boundary explicitly unconfigured; no fake payout success or real transfer is attempted.
+- [x] Generate/apply migrations `0020_nostalgic_hellcat.sql` and `0021_rare_jazinda.sql`; validate focused tests, typecheck, and production build.
+- [x] Document Sprint 18 in `docs/SokoMart-sprint-18-beneficiaries.md`.
+- [ ] Defer real M-Pesa verification/B2C payout callbacks, settlement worker leases, refund reversal postings, and legacy parallel-fixture isolation to the next finance hardening sprint.

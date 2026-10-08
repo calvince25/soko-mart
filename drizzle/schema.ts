@@ -263,6 +263,62 @@ export const sellerMembers = mysqlTable(
   }),
 );
 
+export const sellerPayoutBeneficiaries = mysqlTable(
+  "seller_payout_beneficiaries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sellerId: int("sellerId").notNull(),
+    provider: mysqlEnum("provider", ["mpesa"]).notNull(),
+    accountType: mysqlEnum("accountType", ["mobile_money"]).notNull(),
+    maskedDestination: varchar("maskedDestination", { length: 40 }).notNull(),
+    destinationFingerprint: varchar("destinationFingerprint", { length: 128 }).notNull(),
+    displayLabel: varchar("displayLabel", { length: 120 }),
+    status: mysqlEnum("status", ["DRAFT", "PENDING_VERIFICATION", "VERIFIED", "SUSPENDED", "DEACTIVATED", "REJECTED"]).default("DRAFT").notNull(),
+    isPrimary: int("isPrimary"),
+    rejectionReason: text("rejectionReason"),
+    statusReason: text("statusReason"),
+    createdByUserId: int("createdByUserId").notNull(),
+    verifiedByUserId: int("verifiedByUserId"),
+    verifiedAt: timestamp("verifiedAt"),
+    deactivatedAt: timestamp("deactivatedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    sellerStatusIdx: index("idx_payout_beneficiary_seller_status").on(table.sellerId, table.status, table.createdAt),
+    sellerPrimaryUq: uniqueIndex("uq_payout_beneficiary_seller_primary").on(table.sellerId, table.isPrimary),
+    fingerprintIdx: index("idx_payout_beneficiary_fingerprint").on(table.destinationFingerprint),
+    creatorIdx: index("idx_payout_beneficiary_creator").on(table.createdByUserId),
+    sellerFk: foreignKey({ columns: [table.sellerId], foreignColumns: [sellers.id], name: "fk_payout_beneficiary_seller" }).onDelete("restrict"),
+    creatorFk: foreignKey({ columns: [table.createdByUserId], foreignColumns: [users.id], name: "fk_payout_beneficiary_creator" }).onDelete("restrict"),
+    verifierFk: foreignKey({ columns: [table.verifiedByUserId], foreignColumns: [users.id], name: "fk_payout_beneficiary_verifier" }).onDelete("set null"),
+  }),
+);
+
+export const sellerPayoutBeneficiaryEvents = mysqlTable(
+  "seller_payout_beneficiary_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    beneficiaryId: int("beneficiaryId").notNull(),
+    sellerId: int("sellerId").notNull(),
+    actorUserId: int("actorUserId"),
+    eventType: varchar("eventType", { length: 100 }).notNull(),
+    previousStatus: varchar("previousStatus", { length: 40 }),
+    newStatus: varchar("newStatus", { length: 40 }).notNull(),
+    isPrimary: int("isPrimary").notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    beneficiaryIdx: index("idx_payout_beneficiary_event_history").on(table.beneficiaryId, table.createdAt),
+    sellerIdx: index("idx_payout_beneficiary_event_seller").on(table.sellerId, table.createdAt),
+    actorIdx: index("idx_payout_beneficiary_event_actor").on(table.actorUserId),
+    beneficiaryFk: foreignKey({ columns: [table.beneficiaryId], foreignColumns: [sellerPayoutBeneficiaries.id], name: "fk_payout_beneficiary_event_beneficiary" }).onDelete("restrict"),
+    sellerFk: foreignKey({ columns: [table.sellerId], foreignColumns: [sellers.id], name: "fk_payout_beneficiary_event_seller" }).onDelete("restrict"),
+    actorFk: foreignKey({ columns: [table.actorUserId], foreignColumns: [users.id], name: "fk_payout_beneficiary_event_actor" }).onDelete("set null"),
+  }),
+);
+
 export const sellerApplications = mysqlTable(
   "seller_applications",
   {
@@ -1216,6 +1272,19 @@ export const sellersRelations = relations(sellers, ({ many }) => ({
 export const sellerMembersRelations = relations(sellerMembers, ({ one }) => ({
   seller: one(sellers, { fields: [sellerMembers.sellerId], references: [sellers.id] }),
   user: one(users, { fields: [sellerMembers.userId], references: [users.id] }),
+}));
+
+export const sellerPayoutBeneficiariesRelations = relations(sellerPayoutBeneficiaries, ({ one, many }) => ({
+  seller: one(sellers, { fields: [sellerPayoutBeneficiaries.sellerId], references: [sellers.id] }),
+  createdBy: one(users, { fields: [sellerPayoutBeneficiaries.createdByUserId], references: [users.id] }),
+  verifiedBy: one(users, { fields: [sellerPayoutBeneficiaries.verifiedByUserId], references: [users.id] }),
+  events: many(sellerPayoutBeneficiaryEvents),
+}));
+
+export const sellerPayoutBeneficiaryEventsRelations = relations(sellerPayoutBeneficiaryEvents, ({ one }) => ({
+  beneficiary: one(sellerPayoutBeneficiaries, { fields: [sellerPayoutBeneficiaryEvents.beneficiaryId], references: [sellerPayoutBeneficiaries.id] }),
+  seller: one(sellers, { fields: [sellerPayoutBeneficiaryEvents.sellerId], references: [sellers.id] }),
+  actor: one(users, { fields: [sellerPayoutBeneficiaryEvents.actorUserId], references: [users.id] }),
 }));
 
 export const sellerApplicationsRelations = relations(sellerApplications, ({ one, many }) => ({

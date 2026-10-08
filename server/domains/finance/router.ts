@@ -1,7 +1,9 @@
 import { permissionProcedure, router } from "../../_core/trpc";
 import { createAdjustment, createCommissionRule, createHold, createSettlement, listLedger, mySellerSummary, sellerLedger, sellerSummary } from "./service";
 import { adjustmentSchema, commissionRuleSchema, financeListSchema, holdSchema, sellerInputSchema, settlementSchema } from "../../../shared/validation/financeSchemas";
+import { beneficiaryRouter } from "./beneficiaryRouter";
 export const financeRouter=router({
+ beneficiaries: beneficiaryRouter,
   ledger:permissionProcedure("finance.ledger.read").input(financeListSchema).query(({ctx,input})=>listLedger(ctx.user.id,input)),
   myLedger:permissionProcedure("finance.settlement.read_own").input(financeListSchema).query(({ctx,input})=>sellerLedger(ctx.user.id,input)),
   sellerSummary:permissionProcedure("finance.settlement.read_own").input(sellerInputSchema).query(({ctx,input})=>sellerSummary(ctx.user.id,input.sellerId)),

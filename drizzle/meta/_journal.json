@@ -141,6 +141,20 @@
       "when": 1791210045776,
       "tag": "0019_little_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1791381456822,
+      "tag": "0020_nostalgic_hellcat",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1791442855542,
+      "tag": "0021_rare_jazinda",
+      "breakpoints": true
     }
   ]
 }
