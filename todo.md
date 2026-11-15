@@ -29,3 +29,15 @@
 - [x] Generate/apply migrations `0020_nostalgic_hellcat.sql` and `0021_rare_jazinda.sql`; validate focused tests, typecheck, and production build.
 - [x] Document Sprint 18 in `docs/SokoMart-sprint-18-beneficiaries.md`.
 - [x] Defer real M-Pesa verification/B2C payout callbacks, settlement worker leases, refund reversal postings, and legacy parallel-fixture isolation to the next finance hardening sprint; no provider success is simulated in Sprint 18.
+
+## Sprint 19 — M-Pesa B2C payout execution and finance worker
+
+- [x] Add encrypted-at-rest beneficiary destination storage while keeping raw destinations and provider credentials out of API responses, logs, and audit snapshots.
+- [x] Add provider-neutral M-Pesa Daraja B2C submission/status boundaries with explicit configuration gating, asynchronous states, safe normalization, and no fake success when unconfigured.
+- [x] Add seller payout instructions, immutable masked/fingerprint snapshots, provider attempts/events, settlement linkage, idempotency, callback replay protection, and reconciliation-required handling.
+- [x] Add deployment-managed cron worker endpoint with atomic claims, stale recovery, bounded retries, payout submission, and reconciliation-first processing; no sandbox timer is enabled.
+- [x] Add finance payout queue/status/event/pause permissions, seller-safe list/initiation procedures, admin queue UI at `/admin/finance`, and payout outbox notification templates.
+- [x] Generate migration `0022_wide_killmonger.sql`; verify the persistent database already contains its additive tables/column; seed the payout permissions idempotently.
+- [x] Add Sprint 19 focused regression coverage: 5/5 tests; rerun typecheck and production build successfully.
+- [x] Document Sprint 19 in `docs/SokoMart-sprint-19-mpesa-payouts.md`.
+- [ ] Isolate the legacy full-suite fixtures that reuse `+254728144859` and rely on a shared database; do not claim a clean parallel full-suite run until that infrastructure work is complete.

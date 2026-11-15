@@ -15,6 +15,9 @@ import { createRateLimitMiddleware } from "../rateLimit/limiter";
 import { RATE_LIMIT_POLICIES } from "../rateLimit/policies";
 import { expressErrorHandler } from "../errors/expressErrorHandler";
 import { processMpesaCallback } from "../domains/payment/service";
+import { processPayoutCallback } from "../domains/finance/payoutService";
+import { runFinanceWorkerOnce } from "../domains/finance/worker";
+import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -55,6 +58,14 @@ async function startServer() {
     } catch {
       res.status(400).json({ ResultCode: 1, ResultDesc: "Callback rejected" });
     }
+  });
+  app.post("/api/payouts/mpesa/callback", createRateLimitMiddleware(RATE_LIMIT_POLICIES.webhook), async (req, res) => {
+    try { const result = await processPayoutCallback(req.body); res.status(200).json({ ResultCode: 0, ResultDesc: result.ignored ? "Callback already processed" : "Callback accepted" }); }
+    catch { res.status(400).json({ ResultCode: 1, ResultDesc: "Callback rejected" }); }
+  });
+  app.post("/api/scheduled/finance-worker", async (req, res) => {
+    try { const user = await sdk.authenticateRequest(req); if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" }); return res.json({ ok: true, result: await runFinanceWorkerOnce(`cron:${user.taskUid}`) }); }
+    catch { return res.status(500).json({ error: "Finance worker failed" }); }
   });
   // tRPC API
   app.use(

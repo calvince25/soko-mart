@@ -36,6 +36,15 @@ export const ENV = {
     passkey: process.env.MPESA_PASSKEY ?? "",
     callbackUrl: process.env.MPESA_CALLBACK_URL ?? "",
     mock: process.env.MPESA_MOCK === "true",
+    payout: {
+      enabled: process.env.MPESA_PAYOUT_ENABLED === "true",
+      initiatorName: process.env.MPESA_PAYOUT_INITIATOR_NAME ?? "",
+      securityCredential: process.env.MPESA_PAYOUT_SECURITY_CREDENTIAL ?? "",
+      resultUrl: process.env.MPESA_PAYOUT_RESULT_URL ?? "",
+      queueTimeoutUrl: process.env.MPESA_PAYOUT_QUEUE_TIMEOUT_URL ?? "",
+      encryptionKey: process.env.MPESA_PAYOUT_ENCRYPTION_KEY ?? "",
+      timeoutMs: positiveInteger(process.env.MPESA_PAYOUT_TIMEOUT_MS, 15_000),
+    },
   },
 } as const;
 

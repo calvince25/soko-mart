@@ -30,6 +30,9 @@ const templates: Record<string, Template> = {
   support_message_customer: { code: "support_message_customer", category: "transactional", title: "Support case updated", body: "There is a new message on support case {{ticketNumber}}.", path: "/support/{{ticketId}}" },
   support_status_customer: { code: "support_status_customer", category: "transactional", title: "Support case update", body: "Support case {{ticketNumber}} is now {{status}}.", path: "/support/{{ticketId}}" },
   beneficiary_status_seller: { code: "beneficiary_status_seller", category: "security", title: "Payout account update", body: "Your payout account {{maskedDestination}} is now {{status}}.", path: "/seller/finance" },
+  payout_submitted_seller: { code: "payout_submitted_seller", category: "transactional", title: "Payout submitted", body: "Your seller payout is awaiting M-Pesa confirmation.", path: "/seller/finance" },
+  payout_confirmed_seller: { code: "payout_confirmed_seller", category: "transactional", title: "Payout confirmed", body: "Your seller payout has been confirmed by M-Pesa.", path: "/seller/finance" },
+  payout_failed_seller: { code: "payout_failed_seller", category: "operational", title: "Payout needs attention", body: "Your seller payout failed or requires reconciliation.", path: "/seller/finance" },
 };
 
 async function getDatabase() { const db = await getDb(); if (!db) throw invalidState("Notification services are temporarily unavailable."); return db; }
@@ -53,6 +56,9 @@ function templateFor(eventType: string, recipientType: string): Template | null 
   if (eventType === "support.message.added") return recipientType === "customer" ? templates.support_message_customer : ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
   if (eventType.startsWith("support.ticket.")) return recipientType === "customer" ? templates.support_status_customer : ["staff", "admin"].includes(recipientType) ? templates.support_ticket_staff : null;
   if (eventType === "beneficiary.status_changed") return recipientType === "seller" ? templates.beneficiary_status_seller : null;
+  if (eventType === "payout.submitted") return recipientType === "seller" ? templates.payout_submitted_seller : null;
+  if (eventType === "payout.confirmed") return recipientType === "seller" ? templates.payout_confirmed_seller : null;
+  if (eventType === "payout.failed" || eventType === "payout.requires_attention") return recipientType === "seller" ? templates.payout_failed_seller : null;
   return null;
 }
 

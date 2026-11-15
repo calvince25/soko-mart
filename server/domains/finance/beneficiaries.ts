@@ -13,6 +13,7 @@ import { getDb } from "../../db";
 import { writeAuditEvent } from "../../audit/audit";
 import { withTransaction } from "../../transactions/database";
 import { enqueueNotificationEvent } from "../notification/service";
+import { encryptPayoutDestination } from "./destinationCrypto";
 
 export type BeneficiaryStatus = "DRAFT" | "PENDING_VERIFICATION" | "VERIFIED" | "SUSPENDED" | "DEACTIVATED" | "REJECTED";
 
@@ -38,7 +39,7 @@ export function fingerprintBeneficiaryDestination(normalizedPhone: string): stri
 }
 
 function safeBeneficiary(row: any) {
-  const { destinationFingerprint: _fingerprint, ...safe } = row;
+  const { destinationFingerprint: _fingerprint, encryptedDestination: _encrypted, ...safe } = row;
   return safe;
 }
 
@@ -107,7 +108,7 @@ export async function createBeneficiary(userId: number, input: { sellerId: numbe
   const created = await withTransaction(async (tx: any) => {
     const existing = await tx.select({ id: sellerPayoutBeneficiaries.id }).from(sellerPayoutBeneficiaries).where(and(eq(sellerPayoutBeneficiaries.sellerId, input.sellerId), eq(sellerPayoutBeneficiaries.destinationFingerprint, fingerprint), ne(sellerPayoutBeneficiaries.status, "DEACTIVATED"))).limit(1);
     if (existing.length) throw conflict("That payout destination is already registered for this seller.");
-    const inserted = await tx.insert(sellerPayoutBeneficiaries).values({ sellerId: input.sellerId, provider: input.provider, accountType: input.accountType, maskedDestination: maskBeneficiaryDestination(normalized), destinationFingerprint: fingerprint, displayLabel: input.displayLabel?.trim() || null, status: "DRAFT", isPrimary: null, createdByUserId: userId });
+    const inserted = await tx.insert(sellerPayoutBeneficiaries).values({ sellerId: input.sellerId, provider: input.provider, accountType: input.accountType, maskedDestination: maskBeneficiaryDestination(normalized), encryptedDestination: encryptPayoutDestination(normalized), destinationFingerprint: fingerprint, displayLabel: input.displayLabel?.trim() || null, status: "DRAFT", isPrimary: null, createdByUserId: userId });
     const beneficiaryId = Number(inserted.insertId);
     await tx.insert(sellerPayoutBeneficiaryEvents).values({ beneficiaryId, sellerId: input.sellerId, actorUserId: userId, eventType: "created", previousStatus: null, newStatus: "DRAFT", isPrimary: 0, reason: "Seller payout destination created." });
     await writeAuditEvent(tx, { actorUserId: userId, action: "finance.beneficiary.created", entityType: "seller_payout_beneficiary", entityId: String(beneficiaryId), afterState: { sellerId: input.sellerId, provider: input.provider, accountType: input.accountType, maskedDestination: maskBeneficiaryDestination(normalized), status: "DRAFT" } });
