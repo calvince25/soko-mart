@@ -5,6 +5,7 @@ import type { TrpcContext } from "./_core/context";
 import { getDb } from "./db";
 import { catalogCategories, catalogProductVariants, catalogProducts, checkoutSessions, commerceCartItems, commerceCarts, customerAddresses, customerPhones, inventoryBalances, inventoryLocations, inventoryMovements, inventoryReservations, orderItems, orderReservationLinks, orderSellerOrders, orders, paymentAttempts, paymentCallbackEvents, paymentReservations, sellerMembers, sellerOrderFulfilmentEvents, sellerOrderFulfilmentNotes, sellers, users } from "../drizzle/schema";
 import { processMpesaCallback } from "./domains/payment/service";
+import { uniqueTestPhone } from "./testFixtures";
 
 const integration = process.env.DATABASE_URL ? describe : describe.skip;
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -31,7 +32,7 @@ integration("fulfilment Sprint 10", { timeout: 30000 }, () => {
   beforeAll(async () => {
     db = (await getDb())!;
     const now = Date.now();
-    testPhone = `+2547${String(now).slice(-8)}`;
+    testPhone = uniqueTestPhone();
     const openId = `fulfilment-sprint10-${now}`;
     const otherOpenId = `fulfilment-sprint10-other-${now}`;
     const userResult = await db.insert(users).values({ openId, name: "Fulfilment Seller", email: `fulfilment-${now}@example.com`, role: "user" });

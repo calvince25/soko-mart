@@ -40,4 +40,4 @@
 - [x] Generate migration `0022_wide_killmonger.sql`; verify the persistent database already contains its additive tables/column; seed the payout permissions idempotently.
 - [x] Add Sprint 19 focused regression coverage: 5/5 tests; rerun typecheck and production build successfully.
 - [x] Document Sprint 19 in `docs/SokoMart-sprint-19-mpesa-payouts.md`.
-- [ ] Isolate the legacy full-suite fixtures that reuse `+254728144859` and rely on a shared database; do not claim a clean parallel full-suite run until that infrastructure work is complete.
+- [x] Isolate legacy full-suite phone fixtures with collision-resistant per-test numbers; the full shared-database suite now passes cleanly.

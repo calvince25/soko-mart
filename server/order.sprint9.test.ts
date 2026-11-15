@@ -6,6 +6,7 @@ import { getDb } from "./db";
 import { catalogCategories, catalogProductVariants, catalogProducts, checkoutSessions, commerceCartItems, commerceCarts, customerAddresses, customerPhones, inventoryBalances, inventoryLocations, inventoryMovements, inventoryReservations, orderAddressSnapshots, orderItems, orderReservationLinks, orderSellerOrders, orders, paymentAttempts, paymentCallbackEvents, paymentReservations, sellerMembers, sellers, users } from "../drizzle/schema";
 import { processMpesaCallback } from "./domains/payment/service";
 import { createOrderFromSuccessfulPayment } from "./domains/order/service";
+import { uniqueTestPhone } from "./testFixtures";
 
 const integration = process.env.DATABASE_URL ? describe : describe.skip;
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -31,7 +32,7 @@ integration("orders Sprint 9", () => {
   beforeAll(async () => {
     db = (await getDb())!;
     const now = Date.now();
-    testPhone = `+2547${String(now).slice(-8)}`;
+    testPhone = uniqueTestPhone();
     const openId = `order-sprint9-${now}`;
     const otherOpenId = `order-sprint9-other-${now}`;
     const userResult = await db.insert(users).values({ openId, name: "Order Customer", email: `order-${now}@example.com`, role: "user" });
