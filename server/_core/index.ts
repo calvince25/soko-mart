@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import { timingSafeEqual } from "node:crypto";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -51,7 +52,16 @@ async function startServer() {
   app.use("/api/oauth", createRateLimitMiddleware(RATE_LIMIT_POLICIES.oauthCallback));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  const validWebhookSecret = (provided: unknown, expected: string) => {
+    if (!expected || typeof provided !== "string") return false;
+    const actual = Buffer.from(provided);
+    const configured = Buffer.from(expected);
+    return actual.length === configured.length && timingSafeEqual(actual, configured);
+  };
   app.post("/api/payments/mpesa/callback", createRateLimitMiddleware(RATE_LIMIT_POLICIES.webhook), async (req, res) => {
+    if (!validWebhookSecret(req.header("x-soko-mpesa-callback-secret"), ENV.mpesa.callbackSecret)) {
+      return res.status(401).json({ ResultCode: 1, ResultDesc: "Callback authentication failed" });
+    }
     try {
       const result = await processMpesaCallback(req.body);
       res.status(200).json({ ResultCode: 0, ResultDesc: result.ignored ? "Callback already processed" : "Callback accepted" });
@@ -60,6 +70,9 @@ async function startServer() {
     }
   });
   app.post("/api/payouts/mpesa/callback", createRateLimitMiddleware(RATE_LIMIT_POLICIES.webhook), async (req, res) => {
+    if (!validWebhookSecret(req.header("x-soko-mpesa-payout-secret"), ENV.mpesa.payout.callbackSecret)) {
+      return res.status(401).json({ ResultCode: 1, ResultDesc: "Callback authentication failed" });
+    }
     try { const result = await processPayoutCallback(req.body); res.status(200).json({ ResultCode: 0, ResultDesc: result.ignored ? "Callback already processed" : "Callback accepted" }); }
     catch { res.status(400).json({ ResultCode: 1, ResultDesc: "Callback rejected" }); }
   });

@@ -148,6 +148,7 @@ export async function assignUser(userId: number, input: { warehouseId: number; a
 export async function listEligibleHandoffs(userId: number, warehouseId: number | undefined, platformAdmin = false) {
   const db = await database();
   const scope = await scopeWarehouseIds(db, userId, platformAdmin);
+  if (!platformAdmin && warehouseId === undefined) return [];
   if (warehouseId) await assertWarehouseAccess(db, userId, warehouseId, platformAdmin);
   if (scope && !scope.length) return [];
   const sellerOrders = await db.select({ sellerOrder: orderSellerOrders, orderNumber: orders.orderNumber, address: orderAddressSnapshots, sellerName: sellers.storeName }).from(orderSellerOrders).innerJoin(orders, eq(orderSellerOrders.parentOrderId, orders.id)).leftJoin(orderAddressSnapshots, eq(orderAddressSnapshots.orderId, orders.id)).innerJoin(sellers, eq(orderSellerOrders.sellerId, sellers.id)).where(eq(orderSellerOrders.fulfilmentState, "handed_to_logistics")).orderBy(desc(orderSellerOrders.handedToLogisticsAt));
@@ -155,7 +156,7 @@ export async function listEligibleHandoffs(userId: number, warehouseId: number |
   if (!sellerOrderIds.length) return [];
   const existing = await db.select({ sellerOrderId: warehouseIntakes.sellerOrderId }).from(warehouseIntakes).where(inArray(warehouseIntakes.sellerOrderId, sellerOrderIds));
   const existingIds = new Set(existing.map((row: any) => row.sellerOrderId));
-  return sellerOrders.filter((row: any) => !existingIds.has(row.sellerOrder.id)).filter((row: any) => !scope || scope.length > 0).map((row: any) => ({ sellerOrder: row.sellerOrder, orderNumber: row.orderNumber, address: row.address, sellerName: row.sellerName, warehouseId: warehouseId ?? null }));
+  return sellerOrders.filter((row: any) => !existingIds.has(row.sellerOrder.id)).map((row: any) => ({ sellerOrder: row.sellerOrder, orderNumber: row.orderNumber, address: row.address, sellerName: row.sellerName, warehouseId: warehouseId ?? null }));
 }
 
 export async function receiveIntake(userId: number, input: { sellerOrderId: number; warehouseId: number; packageCount: number; receivedItemCount?: number; notes?: string }, platformAdmin = false) {

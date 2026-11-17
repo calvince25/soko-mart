@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { sellerPayoutAttempts, sellerPayouts, sellerSettlements } from "../../../drizzle/schema";
+import { financePayoutControls, sellerPayoutAttempts, sellerPayouts, sellerSettlements } from "../../../drizzle/schema";
 import { getDb } from "../../db";
 import { payoutProvider } from "./payouts";
 import { decryptPayoutDestination } from "./destinationCrypto";
@@ -9,6 +9,8 @@ export async function submitPayout(payoutId: number) {
   const [payout] = await db.select().from(sellerPayouts).where(eq(sellerPayouts.id, payoutId)).limit(1);
   if (!payout) throw new Error("Payout not found");
   if (!["ready", "queued", "processing"].includes(payout.status)) return payout;
+  const [control] = await db.select().from(financePayoutControls).where(eq(financePayoutControls.id, 1)).limit(1);
+  if (control?.paused === 1) throw new Error("Seller payouts are temporarily paused");
   const attemptNumber = payout.attemptCount + 1;
   await db.update(sellerPayouts).set({ status: "processing", attemptCount: attemptNumber, lastAttemptAt: new Date(), updatedAt: new Date() }).where(eq(sellerPayouts.id, payoutId));
   const startedAt = new Date();

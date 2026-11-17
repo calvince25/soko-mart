@@ -41,3 +41,13 @@
 - [x] Add Sprint 19 focused regression coverage: 5/5 tests; rerun typecheck and production build successfully.
 - [x] Document Sprint 19 in `docs/SokoMart-sprint-19-mpesa-payouts.md`.
 - [x] Isolate legacy full-suite phone fixtures with collision-resistant per-test numbers; the full shared-database suite now passes cleanly.
+
+## Sprint 20 — Production-readiness audit and hardening
+
+- [x] Audit identity, RBAC/IDOR, catalog/inventory, commerce/payments, M-Pesa/finance, logistics, returns/support, and operations scope against the Sprint 20 acceptance criteria; document the operations-audit credit limitation explicitly.
+- [x] Add trusted shared-secret gates to customer-payment and seller-payout callback routes; callbacks without configured secrets are rejected before financial state changes.
+- [x] Reject fractional-KES payout amounts instead of silently flooring seller entitlements; enforce payout pause in payout creation and worker submission.
+- [x] Close the cross-warehouse eligible-handoff listing leak, repair assignment-to-pickup delivery state flow, require active verified couriers, restrict OTP issue to out-for-delivery shipments, and validate support context ownership/relationships.
+- [x] Add payout conversion regression coverage; final validation is 25 test files / 119 tests passing, typecheck clean, production build clean, and live preview healthy.
+- [x] Write `docs/SokoMart-sprint-20-production-readiness-audit.md` with a no-go recommendation for unrestricted real-money production until remaining blockers are closed.
+- [ ] Complete remaining Sprint 20 blockers: explicit RBAC migration for the legacy admin bypass, full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, settlement refund/adjustment postings and commission-rule unification, distributed rate limiting, and deployment/provider verification.
