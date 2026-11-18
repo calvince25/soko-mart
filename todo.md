@@ -54,4 +54,5 @@
 - [x] Require owner/finance-staff membership for seller finance summaries and ledgers; force renewed catalog moderation after edits to approved/published variants.
 - [x] Align cart availability with canonical on-hand/reserved inventory semantics, consume delivery OTP credentials after success, and make delivery attempt updates compare-and-set safe.
 - [x] Calculate refund totals by joined return-item identity rather than relying on database row order.
-- [ ] Complete remaining Sprint 20 blockers: full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, settlement refund/adjustment postings and commission-rule unification, distributed rate limiting, and deployment/provider verification.
+- [x] Include approved/processing/successful refund deductions and audited adjustment credits/debits in seller available balances and settlement snapshots.
+- [ ] Complete remaining Sprint 20 blockers: full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, settlement posting transactions, commission-rule unification, distributed rate limiting, and deployment/provider verification.
