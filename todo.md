@@ -59,4 +59,5 @@
 - [x] Require storage-style proof references for successful delivery attempts, enforce proof presence in the service, consume OTPs after success, and cover the boundary with regression tests.
 - [x] Synchronize a non-cancelled parent order to completed only after every shipment is delivered, using a transactional compare-and-set flow.
 - [x] Synchronize a seller order to completed only after every shipment belonging to that seller order is delivered, within the delivery transaction.
-- [ ] Complete remaining Sprint 20 blockers: authoritative refund provider/reconciliation, distributed rate limiting, and deployment/provider verification.
+- [x] Add an explicit authorized refund status-query/reconciliation procedure that preserves processing when the provider is unconfigured and posts the immutable ledger reversal only after authoritative success.
+- [ ] Complete remaining Sprint 20 blockers: configure and verify a real refund provider, distributed rate limiting, and deployment/provider verification.

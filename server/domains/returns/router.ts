@@ -1,5 +1,5 @@
 import { permissionProcedure, protectedProcedure, router } from "../../_core/trpc";
-import { createRefund, createReturn, decideReturn, eligibleItems, getEligibility, getReturn, inspectReturn, listMyReturns, listOperationalReturns, listSellerReturns, processRefund, updateReturnStatus } from "./service";
+import { createRefund, createReturn, decideReturn, eligibleItems, getEligibility, getReturn, inspectReturn, listMyReturns, listOperationalReturns, listSellerReturns, processRefund, reconcileRefund, updateReturnStatus } from "./service";
 import { inspectionSchema, refundCreateSchema, refundIdSchema, returnCreateSchema, returnDecisionSchema, returnEligibilitySchema, returnIdSchema, returnListSchema, returnStatusSchema } from "../../../shared/validation/returnSchemas";
 export const returnsRouter = router({
   eligibility: permissionProcedure("return.read_own").input(returnEligibilitySchema).query(({ ctx, input }) => getEligibility(ctx.user.id, input.sellerOrderId, input.orderItemId)),
@@ -14,4 +14,5 @@ export const returnsRouter = router({
   inspect: permissionProcedure("return.inspect").input(inspectionSchema).mutation(({ ctx, input }) => inspectReturn(ctx.user.id, input)),
   approveRefund: permissionProcedure("refund.approve").input(refundCreateSchema).mutation(({ ctx, input }) => createRefund(ctx.user.id, input)),
   processRefund: permissionProcedure("refund.process").input(refundIdSchema).mutation(({ ctx, input }) => processRefund(ctx.user.id, input.refundId)),
+  reconcileRefund: permissionProcedure("refund.process").input(refundIdSchema).mutation(({ ctx, input }) => reconcileRefund(ctx.user.id, input.refundId)),
 });

@@ -51,6 +51,7 @@ The following confirmed risks were remediated in the current working tree:
 - Included refund and adjustment effects in seller availability, unified commission-rule selection for ledger and snapshot calculations, and added an idempotent immutable ledger reversal when a refund reaches the authoritative successful state.
 - Required storage-style proof references for successful delivery attempts, enforced proof presence in the service layer, and retained one-time OTP consumption.
 - Synchronized seller-order status to completed only when all shipments for that seller order are delivered, in the same guarded delivery transaction as parent-order synchronization.
+- Added an authorized refund status-query/reconciliation procedure; unconfigured providers remain processing and cannot create a successful state, while authoritative success triggers the immutable ledger reversal.
 
 These changes were validated with 25 test files and 119 passing tests, a clean typecheck, and a clean production build. The callback secret mechanism must be configured at the trusted ingress/provider adapter; no live Safaricom callback claim is made.
 
