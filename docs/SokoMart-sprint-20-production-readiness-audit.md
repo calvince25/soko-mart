@@ -48,6 +48,7 @@ The following confirmed risks were remediated in the current working tree:
 - Added server-side support context validation for order, seller-order, shipment, return, and refund relationships before ticket creation.
 - Removed the legacy all-permissions admin shortcut; permission-protected procedures now require explicit grants. Seller finance summaries and ledgers likewise require owner or finance-staff membership.
 - Forced renewed catalog moderation after edits to approved/published variants, aligned cart availability with on-hand/reserved inventory semantics, consumed delivery OTP credentials after successful delivery, made delivery attempt updates compare-and-set safe, and calculated refund totals by joined return-item identity.
+- Included refund and adjustment effects in seller availability, unified commission-rule selection for ledger and snapshot calculations, and added an idempotent immutable ledger reversal when a refund reaches the authoritative successful state.
 
 These changes were validated with 25 test files and 119 passing tests, a clean typecheck, and a clean production build. The callback secret mechanism must be configured at the trusted ingress/provider adapter; no live Safaricom callback claim is made.
 

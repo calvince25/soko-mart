@@ -55,4 +55,5 @@
 - [x] Align cart availability with canonical on-hand/reserved inventory semantics, consume delivery OTP credentials after success, and make delivery attempt updates compare-and-set safe.
 - [x] Calculate refund totals by joined return-item identity rather than relying on database row order.
 - [x] Include approved/processing/successful refund deductions and audited adjustment credits/debits in seller available balances and settlement snapshots.
-- [ ] Complete remaining Sprint 20 blockers: full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, settlement posting transactions, commission-rule unification, distributed rate limiting, and deployment/provider verification.
+- [x] Unify commission-rule selection for ledger postings and immutable snapshots; add idempotent ledger reversal postings when a refund reaches the authoritative successful state.
+- [ ] Complete remaining Sprint 20 blockers: full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, distributed rate limiting, and deployment/provider verification.
