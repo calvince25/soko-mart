@@ -56,4 +56,5 @@
 - [x] Calculate refund totals by joined return-item identity rather than relying on database row order.
 - [x] Include approved/processing/successful refund deductions and audited adjustment credits/debits in seller available balances and settlement snapshots.
 - [x] Unify commission-rule selection for ledger postings and immutable snapshots; add idempotent ledger reversal postings when a refund reaches the authoritative successful state.
-- [ ] Complete remaining Sprint 20 blockers: full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, distributed rate limiting, and deployment/provider verification.
+- [x] Require storage-style proof references for successful delivery attempts, enforce proof presence in the service, consume OTPs after success, and cover the boundary with regression tests.
+- [ ] Complete remaining Sprint 20 blockers: full shipment/order synchronization, authoritative refund provider/reconciliation, distributed rate limiting, and deployment/provider verification.

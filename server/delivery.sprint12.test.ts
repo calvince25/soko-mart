@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { deliveryAttemptSchema } from "../shared/validation/deliverySchemas";
 
 const user = { id: 991201, openId: "delivery-test", name: "Delivery Test", email: "delivery@test.local", loginMethod: "test", role: "user" as const, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() };
 function context(permissions: string[] = []): TrpcContext { return { user, permissions: new Set(permissions), req: { protocol: "https", headers: {} } as any, res: {} as any }; }
@@ -21,6 +22,10 @@ describe("Sprint 12 delivery boundaries", () => {
   it("rejects invalid delivery OTP shape before reaching the service", async () => {
     const caller = appRouter.createCaller(context(["logistics.shipment.deliver"]));
     await expect(caller.delivery.attempt({ shipmentId: 1, outcome: "delivered", otp: "12" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+  it("accepts storage references but rejects arbitrary proof URLs", () => {
+    expect(() => deliveryAttemptSchema.parse({ shipmentId: 1, outcome: "delivered", otp: "1234", proofRef: "proofs/ship-1.jpg" })).not.toThrow();
+    expect(() => deliveryAttemptSchema.parse({ shipmentId: 1, outcome: "delivered", otp: "1234", proofRef: "https://example.com/proof.jpg" })).toThrow();
   });
   it("requires courier management permission to create identities", async () => {
     const caller = appRouter.createCaller(context(["logistics.shipment.read"]));
