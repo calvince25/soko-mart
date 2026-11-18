@@ -50,7 +50,7 @@ export const permissionProcedure = (permission: PermissionCode) =>
         throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
       }
 
-      if (ctx.user.role !== "admin" && !ctx.permissions?.has(permission)) {
+      if (!ctx.permissions?.has(permission)) {
         throw new TRPCError({ code: "FORBIDDEN", message: `Missing permission: ${permission}` });
       }
 

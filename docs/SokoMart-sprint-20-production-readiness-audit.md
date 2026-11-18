@@ -46,8 +46,10 @@ The following confirmed risks were remediated in the current working tree:
 - Changed assignment to enter the existing `pickup_pending` state and required couriers to be active and verified.
 - Restricted customer delivery OTP issuance to `out_for_delivery` shipments.
 - Added server-side support context validation for order, seller-order, shipment, return, and refund relationships before ticket creation.
+- Removed the legacy all-permissions admin shortcut; permission-protected procedures now require explicit grants. Seller finance summaries and ledgers likewise require owner or finance-staff membership.
+- Forced renewed catalog moderation after edits to approved/published variants, aligned cart availability with on-hand/reserved inventory semantics, consumed delivery OTP credentials after successful delivery, made delivery attempt updates compare-and-set safe, and calculated refund totals by joined return-item identity.
 
-These changes require regression tests and a fresh typecheck/build before checkpointing. The callback secret mechanism must be configured at the trusted ingress/provider adapter; no live Safaricom callback claim is made.
+These changes were validated with 25 test files and 119 passing tests, a clean typecheck, and a clean production build. The callback secret mechanism must be configured at the trusted ingress/provider adapter; no live Safaricom callback claim is made.
 
 ## Verified controls
 

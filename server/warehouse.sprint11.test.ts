@@ -106,7 +106,7 @@ integration("warehouse Sprint 11", () => {
     const staffCaller = appRouter.createCaller(context(staff, warehousePermissions));
     expect((await staffCaller.commerce.warehouse.list({ limit: 20, offset: 0 })).map((row) => row.id)).toContain(warehouseId);
     await expect(staffCaller.commerce.warehouse.get({ warehouseId: secondWarehouseId })).rejects.toThrow("not assigned");
-    const adminCaller = appRouter.createCaller(context(admin));
+    const adminCaller = appRouter.createCaller(context(admin, warehousePermissions));
     expect((await adminCaller.commerce.warehouse.list({ limit: 20, offset: 0 })).map((row) => row.id)).toEqual(expect.arrayContaining([warehouseId, secondWarehouseId]));
   });
 

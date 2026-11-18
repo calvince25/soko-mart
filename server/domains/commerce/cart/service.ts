@@ -90,7 +90,8 @@ async function availabilityMap(db: any, variantIds: number[]) {
   if (!variantIds.length) return map;
   const rows = await db.select().from(inventoryBalances).where(and(inArray(inventoryBalances.variantId, variantIds), eq(inventoryBalances.status, "active")));
   for (const row of rows) {
-    const available = Math.max(0, row.onHand - row.reserved - row.damaged);
+    // Damage adjustments already reduce onHand; do not subtract damaged twice.
+    const available = Math.max(0, row.onHand - row.reserved);
     map.set(row.variantId, (map.get(row.variantId) ?? 0) + available);
   }
   return map;

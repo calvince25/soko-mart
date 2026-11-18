@@ -50,4 +50,8 @@
 - [x] Close the cross-warehouse eligible-handoff listing leak, repair assignment-to-pickup delivery state flow, require active verified couriers, restrict OTP issue to out-for-delivery shipments, and validate support context ownership/relationships.
 - [x] Add payout conversion regression coverage; final validation is 25 test files / 119 tests passing, typecheck clean, production build clean, and live preview healthy.
 - [x] Write `docs/SokoMart-sprint-20-production-readiness-audit.md` with a no-go recommendation for unrestricted real-money production until remaining blockers are closed.
-- [ ] Complete remaining Sprint 20 blockers: explicit RBAC migration for the legacy admin bypass, full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, settlement refund/adjustment postings and commission-rule unification, distributed rate limiting, and deployment/provider verification.
+- [x] Remove the legacy all-permissions admin shortcut from permission middleware and authorization helpers; update warehouse coverage to grant explicit permissions in tests.
+- [x] Require owner/finance-staff membership for seller finance summaries and ledgers; force renewed catalog moderation after edits to approved/published variants.
+- [x] Align cart availability with canonical on-hand/reserved inventory semantics, consume delivery OTP credentials after success, and make delivery attempt updates compare-and-set safe.
+- [x] Calculate refund totals by joined return-item identity rather than relying on database row order.
+- [ ] Complete remaining Sprint 20 blockers: full shipment/order synchronization and proof controls, authoritative refund provider/reconciliation, settlement refund/adjustment postings and commission-rule unification, distributed rate limiting, and deployment/provider verification.

@@ -18,8 +18,6 @@ export async function getUserPermissionCodes(userId: number): Promise<Set<string
 }
 
 export async function hasPermission(user: User, permission: PermissionCode, supplied?: ReadonlySet<string>): Promise<boolean> {
-  // Compatibility for existing users while role assignments are being adopted.
-  if (user.role === "admin") return true;
   const permissionCodes = supplied ?? (await getUserPermissionCodes(user.id));
   return permissionCodes.has(permission);
 }

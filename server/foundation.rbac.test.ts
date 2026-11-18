@@ -44,10 +44,10 @@ describe("Sprint 1 authentication and RBAC foundation", () => {
     await expect(caller.read()).resolves.toBe(42);
   });
 
-  it("preserves the legacy admin compatibility path", async () => {
+  it("does not grant legacy admin users every permission", async () => {
     const admin = { ...user, role: "admin" as const };
     const caller = financeProcedureRouter.createCaller(context({ user: admin, permissions: new Set() }));
-    await expect(caller.read()).resolves.toBe(42);
+    await expect(caller.read()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("keeps the public auth.me procedure available", async () => {
