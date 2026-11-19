@@ -28,6 +28,7 @@ export const ENV = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   rateLimitStore: process.env.RATE_LIMIT_STORE ?? "memory",
+  trustProxy: process.env.TRUST_PROXY === "true",
   mpesa: {
     environment: (process.env.MPESA_ENVIRONMENT ?? "sandbox") as "sandbox" | "production",
     consumerKey: process.env.MPESA_CONSUMER_KEY ?? "",
@@ -59,6 +60,10 @@ export function validateRuntimeConfig(options: { strict?: boolean } = {}): void 
     ["OAUTH_SERVER_URL", ENV.oAuthServerUrl],
   ] as const;
   const missing = required.filter(([, value]) => !value).map(([name]) => name);
+
+  if (strict && ENV.rateLimitStore === "memory") {
+    console.error("[Config] RATE_LIMIT_STORE=memory is unsafe across production replicas; deployment must configure a shared atomic store before go-live");
+  }
 
   if (missing.length === 0) return;
   const message = `Missing required runtime configuration: ${missing.join(", ")}`;

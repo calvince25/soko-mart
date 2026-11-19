@@ -1,5 +1,6 @@
 import type { Request, RequestHandler } from "express";
 import { rateLimited } from "../../shared/errors/appError";
+import { ENV } from "../config/env";
 
 export type RateLimitPolicy = {
   name: string;
@@ -10,11 +11,24 @@ export type RateLimitPolicy = {
 
 type Bucket = { count: number; resetAt: number };
 
+export type RateLimitStore = {
+  consume: (bucketKey: string, windowMs: number, max: number, now?: number) => Promise<{
+    allowed: boolean;
+    remaining: number;
+    retryAfterSeconds: number;
+  }>;
+};
+
 const buckets = new Map<string, Bucket>();
 
 function defaultKey(req: Request): string {
-  const forwarded = req.header("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || req.ip || "unknown";
+  // Only trust forwarded identity when the deployment explicitly trusts its
+  // ingress proxy. Otherwise the header is client-controlled and bypassable.
+  if (ENV.trustProxy) {
+    const forwarded = req.header("x-forwarded-for")?.split(",")[0]?.trim();
+    return forwarded || req.ip || "unknown";
+  }
+  return req.ip || "unknown";
 }
 
 export function consumeRateLimit(policy: RateLimitPolicy, key: string, now = Date.now()) {
@@ -50,4 +64,13 @@ export function createRateLimitMiddleware(policy: RateLimitPolicy): RequestHandl
 
 export function clearRateLimitBucketsForTests() {
   buckets.clear();
+}
+
+/** Adapter contract for Redis/SQL-backed atomic counters in production. */
+export function createMemoryRateLimitStore(): RateLimitStore {
+  return {
+    async consume(bucketKey, windowMs, max, now = Date.now()) {
+      return consumeRateLimit({ name: "store", windowMs, max }, bucketKey, now);
+    },
+  };
 }
