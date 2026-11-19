@@ -162,6 +162,13 @@
       "when": 1794759639319,
       "tag": "0022_wide_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1795068602843,
+      "tag": "0023_overconfident_hitman",
+      "breakpoints": true
     }
   ]
 }

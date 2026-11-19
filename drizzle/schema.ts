@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   index,
   foreignKey,
+  bigint,
   int,
   json,
   mysqlEnum,
@@ -11,6 +12,12 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
+
+export const rateLimitBuckets = mysqlTable("rate_limit_buckets", {
+  bucketKey: varchar("bucketKey", { length: 320 }).primaryKey(),
+  count: int("count").notNull(),
+  resetAt: bigint("resetAt", { mode: "number" }).notNull(),
+});
 
 /**
  * Core user table backing Manus OAuth. Existing columns and the legacy role

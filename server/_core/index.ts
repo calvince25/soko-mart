@@ -12,7 +12,8 @@ import { serveStatic, setupVite } from "./vite";
 import { ENV, validateRuntimeConfig } from "../config/env";
 import { requestCorrelationMiddleware } from "../logging/requestLogger";
 import { configureCors, securityHeaders } from "../security/middleware";
-import { createRateLimitMiddleware } from "../rateLimit/limiter";
+import { configureRateLimitStore, createRateLimitMiddleware } from "../rateLimit/limiter";
+import { createMysqlRateLimitStore } from "../rateLimit/mysqlStore";
 import { RATE_LIMIT_POLICIES } from "../rateLimit/policies";
 import { expressErrorHandler } from "../errors/expressErrorHandler";
 import { processMpesaCallback } from "../domains/payment/service";
@@ -41,6 +42,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   validateRuntimeConfig();
+  if (ENV.rateLimitStore === "mysql") {
+    configureRateLimitStore(createMysqlRateLimitStore(ENV.databaseUrl));
+  }
   const app = express();
   const server = createServer(app);
   app.disable("x-powered-by");

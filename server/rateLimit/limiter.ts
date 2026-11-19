@@ -20,6 +20,7 @@ export type RateLimitStore = {
 };
 
 const buckets = new Map<string, Bucket>();
+let rateLimitStore: RateLimitStore | undefined;
 
 function defaultKey(req: Request): string {
   // Only trust forwarded identity when the deployment explicitly trusts its
@@ -48,18 +49,30 @@ export function consumeRateLimit(policy: RateLimitPolicy, key: string, now = Dat
 
 export function createRateLimitMiddleware(policy: RateLimitPolicy): RequestHandler {
   const keyForRequest = policy.key ?? defaultKey;
-  return (req, res, next) => {
-    const result = consumeRateLimit(policy, keyForRequest(req));
-    res.setHeader("x-rate-limit-limit", policy.max);
-    res.setHeader("x-rate-limit-remaining", result.remaining);
-    if (!result.allowed) {
-      res.setHeader("retry-after", result.retryAfterSeconds);
-      const error = rateLimited(undefined, { policy: policy.name, retryAfterSeconds: result.retryAfterSeconds });
-      res.status(429).json({ error: { code: error.code, message: error.message } });
-      return;
+  return async (req, res, next) => {
+    try {
+      const result = rateLimitStore
+        ? await rateLimitStore.consume(`${policy.name}:${keyForRequest(req)}`, policy.windowMs, policy.max)
+        : consumeRateLimit(policy, keyForRequest(req));
+      res.setHeader("x-rate-limit-limit", policy.max);
+      res.setHeader("x-rate-limit-remaining", result.remaining);
+      if (!result.allowed) {
+        res.setHeader("retry-after", result.retryAfterSeconds);
+        const error = rateLimited(undefined, { policy: policy.name, retryAfterSeconds: result.retryAfterSeconds });
+        res.status(429).json({ error: { code: error.code, message: error.message } });
+        return;
+      }
+      next();
+    } catch {
+      // Never silently fall back to per-process counters in a multi-replica
+      // deployment; availability can be restored after the shared store is.
+      res.status(503).json({ error: { code: "RATE_LIMIT_STORE_UNAVAILABLE", message: "Request protection temporarily unavailable" } });
     }
-    next();
   };
+}
+
+export function configureRateLimitStore(store: RateLimitStore | undefined) {
+  rateLimitStore = store;
 }
 
 export function clearRateLimitBucketsForTests() {

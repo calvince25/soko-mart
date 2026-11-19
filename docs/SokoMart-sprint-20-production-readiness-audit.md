@@ -52,7 +52,7 @@ The following confirmed risks were remediated in the current working tree:
 - Required storage-style proof references for successful delivery attempts, enforced proof presence in the service layer, and retained one-time OTP consumption.
 - Synchronized seller-order status to completed only when all shipments for that seller order are delivered, in the same guarded delivery transaction as parent-order synchronization.
 - Added an authorized refund status-query/reconciliation procedure; unconfigured providers remain processing and cannot create a successful state, while authoritative success triggers the immutable ledger reversal.
-- Added a deployment-facing rate-limit store contract, defaulted client identity to the socket IP unless `TRUST_PROXY=true`, and emit a production configuration warning when `RATE_LIMIT_STORE=memory`; a shared atomic store still must be wired and verified before horizontal production.
+- Added a deployment-facing rate-limit store contract, a transactional MySQL implementation selected by `RATE_LIMIT_STORE=mysql`, and migration `drizzle/0023_overconfident_hitman.sql`; defaulted client identity to the socket IP unless `TRUST_PROXY=true`, and fail closed with HTTP 503 if the configured shared store is unavailable. The migration is applied in the project database; deployment configuration and replica-level verification remain outstanding.
 
 These changes were validated with 25 test files and 120 passing tests, a clean typecheck, and a clean production build. The callback secret mechanism must be configured at the trusted ingress/provider adapter; no live Safaricom callback claim is made.
 
